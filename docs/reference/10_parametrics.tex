@@ -1,0 +1,184 @@
+\section{Parametrics and Static Elaboration}
+\label{sec:parametrics}
+
+Minispec provides parametric types, such as \texttt{Bit\#(n)},
+that take one or more \emph{parameters}, such as \texttt{n} in this case.
+These parameters must be known at compile time, and when specified,
+yield a concrete type that can be implemented in hardware (such as \texttt{Bit\#(4)}, a 4-bit value).
+Minispec also allows defining parametric functions, modules, structs, and type synonyms.
+
+Parametrics enable writing \emph{generic} hardware descriptions
+that are then concretized as needed. For example,
+we can write single a parametric function \texttt{add\#(n)}
+that adds two \texttt{n}-bit numbers.
+Then, users of the function will call it with particular values of \texttt{n},
+instantiating adder circuits of different widths.
+Without parametrics, each such adder would require writing a separate function.
+
+In programming languages, parametrics (also known as generics, templates, or polymorphic types)
+primarily improve efficiency and safety: by specializing code at compile time,
+parametrics reduce work done at execution time and prevent type errors.
+In Minispec, parametrics play a more important role,
+because combinational logic has limitations that programming languages do not (it is not Turing-complete).
+Thus, \emph{parametrics and compile-time specialization enables functionality that cannot be implemented with combinational logic}.
+For example, in a programming language without parametrics (like C),
+we could always write a procedure that adds two numbers of arbitrary bitwidths,
+e.g., by looping over their bits and adding them one by one.
+%(the width would be a runtime \emph{argument} to such procedure).
+But we cannot implement a single function (combinational circuit)
+that adds numbers of arbitrary widths.
+
+%Parametrics rely on having clear guarantees on what computation is done at compile time.
+%Minispec enforces this through the type system:
+%all \texttt{Integer} values are computed at compile time.
+
+\paragraph{Parameters} can be either \texttt{Integer}s or \texttt{type}s (including parametric types).
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-2em}
+\begin{mscode}
+// Doubles a Bit#(n) value
+function Bit#(n+1) double
+  #(Integer n)(Bit#(n) x)
+  = {x, 1'b0};
+
+// n-element FIFO of T's
+module FIFO#(Integer n,
+             type T);
+ Vector#(n, RegU#(T)) elems;
+ Reg#(Bit#(log2(n))) head(0);
+ Reg#(Bit#(log2(n))) tail(0);
+ method Maybe#(T) first;
+ ...
+endmodule
+\end{mscode}
+\vspace{-3em}
+\end{wrapfigure}
+
+
+
+
+\paragraph{Parametric definitions} follow a consistent syntax.
+Parameters are specified right after the function name or module/struct/synonym type,
+enclosed in \verb|#(...)|. Specifically:
+\begin{compactitem}
+\item Functions: \verb|function RetType fname#(PDef1, ..., PDefN) ...|.
+\item Modules: \verb|module ModType#(PDef1, ..., PDefN) ...|.
+\item Structs: \verb|typedef struct { ... } StructType#(PDef1, ..., PDefN);|.
+\item Synonyms: \verb|typedef Type NewType#(PDef1, ..., PDefN);|.
+\end{compactitem}
+and \verb|PDef|$_{\texttt{i}}$ are the \emph{parameter definitions}, each of which can be:
+\begin{compactitem}
+\item \texttt{Integer intParam} to denote an \texttt{Integer} parameter with name \texttt{intParam}, which must be lowercase.
+\item \texttt{type TypeParam} to denote a \texttt{type} parameter with name \texttt{TypeParam}, which must be uppercase.
+\item A specific Integer literal or type, which allows writing parametric definitions that are already specialized to particular parameter values
+  (see discussion on \emph{specialization} below).
+\end{compactitem}
+Integer and type parameter names can be used anywhere in the parametric definition,
+including in the return type of the function.
+
+%\begin{wrapfigure}{r}{0.32\columnwidth}
+%\vspace{-2em}
+
+%\begin{minipage}{0.49\columnwidth}
+\begin{listing}
+\begin{minipage}[b]{0.49\columnwidth}
+  \begin{mscode}
+// n-bit ripple-carry adder with carry-in
+// using a single parametric function
+function Bit#(n+1) rca#(Integer n)
+  (Bit#(n) a, Bit#(n) b, Bit#(1) cin);
+ if (n == 1) begin
+  let cout = (a & b) | (a & cin) | (b & cin);
+  let sum = a ^ b ^ cin;
+  return {cout, sum};
+ end else begin
+  let x = rca#(n-1)(a[n-2:0], b[n-2:0], cin);
+  let u = rca#(1)(a[n-1], b[n-1], x[n-1]);
+  return {u, x[n-2:0]};
+ end
+endfunction
+\end{mscode}
+\end{minipage}
+\hfill
+\begin{minipage}[b]{0.49\columnwidth}
+\begin{mscode}
+// n-bit ripple-carry adder with carry-in
+// base case (specialized)
+function Bit#(2) rca#(1)
+  (Bit#(1) a, Bit#(1) b, Bit#(1) cin);
+ let cout = (a & b) | (a & cin) | (b & cin);
+ let sum = a ^ b ^ cin;
+ return {cout, sum};
+endfunction
+
+// general case (used when n != 1)
+function Bit#(n+1) rca#(Integer n)
+  (Bit#(n) a, Bit#(n) b, Bit#(1) cin);
+ let x = rca#(n-1)(a[n-2:0], b[n-2:0], cin);
+ let u = rca#(1)(a[n-1], b[n-1], x[n-1]);
+ return {u, x[n-2:0]};
+endfunction
+\end{mscode}
+\end{minipage}
+
+\vspace{-0.22in}
+\hbox{\hspace{3.23in} {(a)} \hspace{3.33in} {(b)}}
+\caption{Two ripple-carry adder implementations using recusive parametric functions. (a) uses a single function,
+whereas (b) splits the base case into a separate specialized parametric function definition.}
+\label{lst:rcas}
+\end{listing}
+
+%\vspace{-3em}
+%\end{wrapfigure}
+
+\emph{Parametric definitions can be recursive on parameters}.
+For example, function \texttt{rca\#(n)} in \trailref{lst:rcas}{(a)} calls \texttt{rca\#(n-1)}.
+This recursion is unrolled at compile time, so it translates to a chain of function instances.
+
+\emph{Parametric definitions can be specialized}.
+The code can specify both a general parametric definition with Integer and type parameters,
+and one or more specialized definitions with fixed integers and types.
+On a match, a specialized definition takes precedence over the general one.
+For example, an alternative defintion of function \texttt{add\#(n)}, shown in \trailref{lst:rcas}{(b)},
+includes a specialized definition of \texttt{rca\#(1)} as a base case to stop recursion.
+
+\paragraph{Static elaboration:} Parametrics require clear guarantees on what computations
+and simplifications the compiler performs at compile time.
+We refer to this process as static elaboration.
+
+Guarantees are important because we may want to use parametrics with expressions.
+For example, \trailref{lst:rcas}{(a)} calls \texttt{rca\#(n-1)},
+and we must guarantee that all parameters are computed at compile time.
+
+Minispec guarantees the following static elaboration behavior:
+\begin{compactenum}
+\item All \texttt{Integer} expressions and variables are elaborated, i.e., turned into concrete values at compile time.
+  An \texttt{Integer} expression or variable that cannot be elaborated causes a compiler error.
+\item \texttt{Bool} expressions and variables are elaborated if they depend only on \texttt{Bool} constants and \texttt{Integer} values.
+\item All conditional expressions (ternary, case) and statements (if-else, case)
+  whose predicate is an elaborated \texttt{Bool} or \texttt{Integer} expression are
+  elaborated to include only the branch that they execute, eliminating all others.
+\item Parametrics are instantiated and elaborated lazily, as the compiler finds code that uses them.
+\end{compactenum}
+
+To show how these rules combine, consider the example in
+\trailref{lst:rcas}{(a)}.
+Assume that some other code calls \verb|rca#(3)|.
+This triggers the instantiation of \verb|rca#(Integer n)| with \verb|n=3|.
+Since \verb|n == 1| is elaborated to \verb|False|, the \verb|if| branch is eliminated and all that remains is
+the \verb|else| branch.
+This code calls \verb|rca#(2)| (by elaborating \verb|rca#(n-1)|) and \verb|rca#(1)|.
+The compiler then instantiates \verb|rca#(2)| (and leaves \verb|rca#(1)| pending).
+\verb|rca#(2)| is elaborated just like \verb|rca#(3)|: the \verb|if-else| is turned into the \verb|else| branch,
+which calls \verb|rca#(1)| twice.
+Finally, the compiler instantiates \verb|rca#(1)|.
+\verb|n == 1| is elaborated to \verb|True|, so the \verb|else| branch is eliminated and all that remains is the
+\verb|if| branch. Since this branch does not call any functions,
+no more parametrics are needed and static elaboration terminates.
+
+From the example above, note that recursion stops by relying on elimination of the \verb|else| branch in \verb|rca#(1)|.
+If this did not happen (i.e., if the if's predicate could not be elaborated),
+then the \verb|else| branch would trigger a call to \verb|rca#(0)| and recursion would not end.
+(To avoid infinite recursion, the compiler limits recursion depth and emits an error when exceeded.)
+

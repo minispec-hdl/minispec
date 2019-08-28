@@ -1,0 +1,39 @@
+$READVERILOGCMDS
+
+hierarchy -top $MODNAME;
+proc;
+flatten; opt
+fsm;
+memory;
+techmap; opt
+
+# ABC Pass 1: Sequential optimizations (which break stime, so we can't get timing info)
+dfflibmap -prepare -liberty $STDCELLFILE
+abc -liberty $STDCELLFILE -constr $CONSTRFILE -D $DELAY -dff -clk CLK -script $OUTDIR/abc_seq.script
+dfflibmap -liberty $STDCELLFILE
+
+# Now remap into the yosys internal lib so we can 
+read_verilog $VERILOGSTDCELLFILE
+hierarchy -top $MODNAME;
+proc; flatten;
+techmap;
+
+# ABC Pass 2: Without sequential optimizations (but stime works fine)
+dfflibmap -liberty $STDCELLFILE
+abc -liberty $STDCELLFILE -constr $CONSTRFILE -D $DELAY -dff -clk CLK -script $OUTDIR/abc.script
+
+# ABC leaves a bunch of unused nets
+# dsm: Don't eliminate them though, now we use them for name demangling
+#opt
+
+# Reporting
+stat
+
+# Save BLIF file so we can postprocess ABC output to get the Bluespec signal names
+write_blif $OUTDIR/out.blif
+
+# Save Verilog file so we can analyze the memories in the design (NOTE: Can't be a .v file)
+write_verilog $OUTDIR/out.verilog
+
+clean
+$POST

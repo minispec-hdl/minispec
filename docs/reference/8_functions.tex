@@ -1,0 +1,179 @@
+\section{Functions and Combinational Logic}
+\label{sec:functions}
+
+Functions implement combinational logic (also known as Boolean logic).
+Each function takes one or more \emph{input arguments} and produces an
+\emph{output result} that depends only on the values of the arguments,
+and does not depend on any other state.
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-1em}
+\begin{mscode}
+function Bool and2(Bool a,
+                   Bool b);
+  return a && b;
+endfunction
+
+function Bool and3(Bool a,
+                   Bool b,
+                   Bool c);
+  Bool ab = and2(a, b);
+  return and2(ab, c);
+endfunction
+
+// Functions can have 
+// multiple return statements
+function Bool maj(Bit#(3) x);
+  Bit#(2) sum = {0, x[0]} +
+                {0, x[1]} +
+                {0, x[2]};
+  if (sum >= 2) return True;
+  else return False;
+endfunction
+
+// Shorthand syntax
+function Bit#(1) p(Bit#(3) x)
+  = x[0] ^ x[1] ^ x[2];
+\end{mscode}
+\vspace{-6em}
+\end{wrapfigure}
+
+%// Functions are first-class
+%// objects
+%function Bool c(Bool a,
+%                Bit#(3) x);
+%  let fn = a ? maj : par;
+%  return fn(a);
+%endfunction
+
+\paragraph{Definition:}
+Functions can be defined using the following syntax:
+\begin{center}
+\verb|function RetType fname(Type1 arg1, ..., TypeN argN);| \\
+\verb|  stmt1                                             | \\
+\verb|   ...                                              | \\
+\verb|  stmtN                                             | \\
+\verb|endfunction                                         |
+\end{center}
+where \verb|fname| is the function's name;
+\verb|RetType| is the type of its return value;
+\verb|arg|$_{\texttt{i}}$ are the names of its input arguments,
+with types \verb|Type|$_{\texttt{i}}$;
+and \verb|stmt|$_{\texttt{i}}$ are statements.
+
+Functions must return a result by using \emph{return statements} (\autoref{sec:retStmt}).
+As shown in the examples, simple functions without any conditional statements
+should end with a single return statement.
+Functions can use multiple return statements, e.g., in different branches
+of conditional (if/else or case) statements.
+A function that does not always return a value will produce a compiler error.
+
+Functions can return only one value. To emulate returning multiple values, the
+function can return a struct (\autoref{sec:structs}) instead.
+%
+A function may have no arguments.
+
+Functions can be parametric; see \autoref{sec:parametrics} for details.
+
+\paragraph{Definition by assignment:}
+Short functions consisting of a single expression can be declared more succinctly using the following syntax:
+\begin{center}
+\verb|function RetType fname(Type1 arg1, ..., TypeN argN) = expr;|
+\end{center}
+where \verb|expr| is an expression of type \verb|RetType| that computes the return value,
+and all other elements are as above.
+
+% dsm: Skipping 1st-class object stuff, because (1) it's too advanced, (2) we don't have proper Minispec Function types yet that obey Minispec syntax, and (3) functions that take/returns functions... cool, but makes synthesis explanation harder.
+%\paragraph{Use:} Call expressions (\autoref{sec:calls}) allow invoking a function.
+%Moreover, \emph{functions are first-class objects}, and can be assigned to variables or used anywhere a variable is used.
+
+\paragraph{Restrictions:}
+Functions must obey two restrictions to be synthesizable to hardware:
+\begin{compactenum}
+\item No \texttt{Integer} arguments or an \texttt{Integer} result
+  (\texttt{Integer}s may only be parameters, see \autoref{sec:parametrics}).
+\item No recursion
+  (parametric functions can perform recursion on \texttt{Integer} parameters
+  because all such recursive calls are unfolded at compile time, see \autoref{sec:parametrics}).
+\end{compactenum}
+
+\subsection{Combinational logic synthesis}
+\label{sec:combinational}
+
+Functions are always synthesizable into combinational circuits, i.e.,
+circuits with digital inputs and outputs, where each output is a Boolean function of the inputs,
+and where each output is guaranteed to reach a stable digital value after
+a bounded \emph{propagation delay} from the time at which the inputs reach valid digital values.
+Combinational circuits are a basic building block of digital logic.
+Here, we discuss \emph{why} Minispec functions are always synthesizable into combinational circuits, and
+sketch \emph{how} this synthesis is done in practice.
+
+\paragraph{Function properties:}
+Minispec functions have three properties that differ from
+functions in other programming languages and that enable synthesis to combinational logic:
+\begin{compactenum}
+\item \emph{Pure}: Functions compute the output based \emph{only} on the values of its input arguments.
+  They cannot use or alter any state or variables outside of the function
+  (they may use global constants, however).
+  Thus, given a particular set of imput arguments, a function alwas produces the same output.
+\item \emph{Acyclic}: Functions have no cycles, i.e., they cannot ``jump back'' to a prior point of execution. 
+  % FIXME(dsm): Needs better explanation.
+  They are thus always guaranteed to terminate.
+  This is because \emph{(i)} recursion is not allowed, and \emph{(ii)} for loops have known and fixed iteration counts.
+\item \emph{Synthesizable arguments and output}: Each input and output of a function is always
+  of a type that is representable using a fixed number of bits.
+\end{compactenum}
+
+\paragraph{Why functions are synthesizable:}
+Given the above properties, it is trivial to show that all functions can be synthesized to combinational circuits.
+Since each input and output takes a fixed number of bits, we can always
+enumerate all input values, build a truth table (computing the output for each input),
+and implement the truth table as a combinational circuit (e.g., as a sum-of-products).
+While this is a simple proof, it is not how circuits are actually synthesized,
+as building a truth table and deriving an optimized implementation from it
+takes too much space and time for circuits with more than a few bits of inputs.
+
+\paragraph{How functions are synthesized:}
+In practice, Minispec functions are synthesized by composing smaller building blocks.
+This exploits that combinationsl circuits \emph{compose easily}:
+a circuit composed of multiple combinational devices connected with wires is also combinational
+if each input of the constituent devices is tied to a single output or a constant value,
+and if the network is \emph{acyclic}, i.e., it has no directed cycles
+(which may create feedback loops).
+
+Since Minispec functions are acyclic, one can synthesize a function by synthesizing each syntax element
+(expressions, statements, etc.) and connecting them.
+Though the details of synthesis depend on the compiler and tools used,
+it is useful to roughly understand how different syntax elements are translated and composed.
+Specifically:
+\begin{compactitem}
+% Expressions
+\item Each complex expression is broken down into a tree of basic operations (e.g., operators or function calls), then each operation is synthesized,
+  and finally their inputs and outputs are wired together in the same tree fashion.
+\item All operators (\autoref{sec:expressions}) can be implemented using combinational circuits.
+  Each operator is synthesized as a separate circuit.
+\item Conditional expressions translate to multiplexers: each ternary operator is a 2-to-1 multiplexer, each case statement is an N-to-1 multiplexer.
+\item Concatenation expressions, struct creation expressions, and selection expressions that use statically known indices require wires but no logic:
+  they are just combining or selecting bits of existing variables.
+  Selection expressions that use dynamic indices require some logic (e.g., a barrel shifter).
+\item Functions are \emph{inlined}: each function call instantiates a separate circuit implementing the function, which is then synthesized.
+  (since there's no recursion, inlining always terminates).
+% Statements
+\item Variable assignments require no logic. Each assignment is simply naming the value (i.e., wires) of a particular expression,
+  so it can be used somewhere else.
+\item If statements are translated to multiplexers: all expressions within the if statement are synthesized,
+  then each variable assigned to within the if statement is followed by a multiplexer
+  to select between the value assigned within the if branch (if the predicate is true)
+  and the value before the if branch (if the predicate is false).
+  If-else statements are similar: the if and else branches are both synthesized,
+  and the multiplexer selects between the value in the if branch and the value in the else branch.
+\item Case statements are similar to if statements, requiring a multiplexer for each value assigned
+  within the statement to select the right branch.
+\item For loops are \emph{unrolled}: Each iteration is expanded into a separate block, then synthesized as usual.
+\item A single return statement at the end of the function simply names the output of the function and requires no logic.
+  In functions with multiple return statements, the output value is selected using multiplexers similar to if-else statements.
+\end{compactitem}
+
+\todo{Figures showing the synthesis of several snippets.}
+
+

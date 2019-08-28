@@ -1,0 +1,167 @@
+\section{Lexical Structure}
+\label{sec:lexical}
+
+This section describes the types of tokens or lexemes in Minispec, i.e., its most basic syntax elements.
+
+\subsection{Whitespace and comments}
+
+Spaces, tabs, and newlines all constitute whitespace.
+Minispec is a \emph{free-form language}: whitespace serves only to separate tokens and has no other significance.
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-2em}
+\begin{mscode}
+// Example one-line comment
+/* You can write comments
+   across multiple lines */
+\end{mscode}
+\vspace{-2em}
+\end{wrapfigure}
+Comments are treated as whitespace, and can either be one-line comments starting with \texttt{//},
+or multiline comments delimited by \texttt{/*} and \texttt{*/}. Comments do not nest.
+
+\subsection{Identifiers and capitalization}
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-2em}
+\begin{mscode}
+// Uppercase identifiers
+Bool
+FooType
+
+// Lowercase identifiers
+fooVar
+barFunction
+
+// Dollar-sign identifiers
+$display
+$finish
+\end{mscode}
+\vspace{-4em}
+\end{wrapfigure}
+
+Identifiers, also called names, are non-empty strings where:
+\begin{compactitem}
+\item The first character is a lowercase letter, an uppercase letter, or a dollar sign (\texttt{\$}).
+\item The remaining characters are alphanumeric or underscore (\texttt{\_}).
+\end{compactitem}
+
+Capitalization is important in Minispec.
+Identifiers for type names, module names, and enum labels \emph{must begin with an uppercase letter}.
+Every other identifier (i.e., those for variables, function names, method names, rule names, input names, and instance names)
+\emph{must begin with a lowercase letter}.
+
+Identifiers whose first character is \texttt{\$} are reserved for \emph{system functions}
+(see \autoref{sec:systemFunctions}).
+
+\subsection{Keywords}
+
+The following words are reserved \emph{Minispec keywords}, and cannot be used as normal identifiers:
+
+% dsm: Import/bsvimport @ end now to avoid messing up with syntax
+\begin{mscode}
+type       function       method       input      begin    for          let
+typedef    endfunction    endmethod    default    end      return
+struct     module         rule         case       if       import
+enum       endmodule      endrule      endcase    else     bsvimport    
+\end{mscode}
+
+In addition, because Minispec compiles to BSV and Verilog, the Minispec compiler currently forbids using keywords from these languages as identifiers.
+The compiler will produce an error is any of these keywords is used.
+
+\subsection{Number literals}
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-2em}
+\begin{mscode}
+// Sized number literals
+// 4-bit decimal value 10
+4'd10    // in decimal
+4'b1010  // in binary
+4'ha     // in hex
+4'hA     // hex digits are
+         // case-insensitive
+// 8-bit decimal value 10
+8'b00001010
+8'b1010
+8'h0a
+
+// Unsized number literals
+'d10  // decimal 10
+10    // also decimal 10
+'b1010
+'habcdef
+
+// _ can separate digits
+16'b1010_0110_1101_0010
+\end{mscode}
+\vspace{-2em}
+\end{wrapfigure}
+
+Number literals encode numeric values. They can be \emph{sized} or \emph{unsized}.
+Sized literals encode their bit-width, i.e., the number of bits they take.
+By contrast, unsized literals have no explicit bit-width.
+Literals can be specified in decimal, hexadecimal, and binary bases.
+
+A sized number literal always consists of three elements:
+\begin{compactenum}
+\item Bit-width, written as a decimal number.
+\item Base: \texttt{'d} for decimal, \texttt{'h} for hexadecimal, and \texttt{'b} for binary.
+\item Value, written using digits in the specified base (0--9 for decimal, 0--9 and a--f for hex, and 0 or 1 for binary).
+\end{compactenum}
+
+An unsized number literal has no bit-width, and consists of an optional base and value.
+If the base is not given, the value is interpreted as decimal.
+
+To make long values more readable, number literals allow
+using underscore characters (\_) to separate value digits.
+
+Sized and unsized literals can both be used in expressions involving \verb|Bit#(n)| variables.
+The examples below illustrate their pros and cons.
+Sized literals enforce their bit-width, and will cause a compile-time error on a width mismatch.
+By contrast, unsized literals have their bit-width deduced by the compiler.
+This makes code more succint and can help express long values,
+but the compiler won't catch mistakes that stem from wrong assumptions about bit-widths.
+
+\begin{mscode}
+Bit#(4) x = 4'd10;  // OK, as both x and the literal are 4 bits
+Bit#(5) y = 4'd10;  // Error due to mismatched bit-widths, y is 5 bits
+Bit#(4) z = 10;     // OK, 10 inferred to be 4 bits
+Bit#(4) w = 1000;   // Error, decimal 1000 inferred to be 4 bits but doesn't fit in 4 bits
+\end{mscode}
+
+Unsized literals must be used in in expressions involving \verb|Integer| variables,
+as \verb|Integer| is an unsized, compile-time-only type (see \autoref{sec:integer}).
+
+\subsection{String literals}
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-2em}
+\begin{mscode}
+"This is a string"
+"String with a\nline break"
+\end{mscode}
+\vspace{-2em}
+\end{wrapfigure}
+
+String literals are enclosed in double quotes (\verb|"..."|) and must be written on a single line.
+String literals admit special characters using the following escape sequences:
+
+\begin{tabular}{rrrrr}
+  \emph{Character} & newline & tab & backslash & double quote \\
+  \emph{Escape sequence} & \verb|\n| & \verb|\t| & \verb|\\|& \verb|\"| \\
+\end{tabular}
+
+\subsection{Bool and Maybe literals}
+
+\verb|True| and \verb|False| are literals of type \verb|Bool| (\autoref{sec:bool}).
+\verb|Invalid| and \verb|Valid| are literals of type \verb|Maybe| (\autoref{sec:maybe}).
+Like keywords, these literals cannot be used as normal identifiers.
+
+\subsection{Don't-care values}
+
+A question mark (?) denotes a special don't-care value.
+Don't-care values can be assigned to variables of any type and can be used in place of literals.
+They help the compiler produce better circuits (see \autoref{sec:combinational} for examples). %, as shown in the examples.
+%TODO: Examples
+

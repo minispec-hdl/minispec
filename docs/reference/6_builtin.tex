@@ -1,0 +1,297 @@
+\section{Built-In Types}
+\label{sec:builtin}
+
+This section describes the five basic built-in types that Minispec provides.
+It details the semantics of the operators each type supports and describes
+the built-in functions provided to work with these types.
+
+\subsection{Bool}
+\label{sec:bool}
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-2.5em}
+\begin{mscode}
+Bool a = True;
+Bool b = False;
+
+Bool x = !a;      // False
+Bool y = a && b;  // False
+Bool z = a || b;  // True
+
+Bool e = a == b;  // False
+Bool n = a != b;  // True
+\end{mscode}
+\vspace{-2em}
+\end{wrapfigure}
+
+Variables of type \verb|Bool| can take one of two values, \verb|True| or \verb|False|.
+\verb|Bool| values support the three basic Boolean algebra operations:
+Boolean NOT (\verb|!|), Boolean AND (\verb|&&|) and Boolean OR (\texttt{||}).
+
+\verb|Bool| values also support equality operations (\verb|==|, \verb|!=|).
+Note that, for Boolean values, \verb|!=| is equivalent to Boolean XOR,
+and \verb|==| is equivalent to Boolean XNOR.
+
+\subsection{Bit\#(n)}
+\label{sec:bit}
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-2.5em}
+\begin{mscode}
+Bit#(4) a = 4'b0011;
+Bit#(4) b = 4'b0101;
+
+Bit#(4) x = ~a;    // 4'b1100
+Bit#(4) y = a & b; // 4'b0001
+Bit#(4) z = a ^ b; // 4'b0110
+
+Bit#(4) s = a + b; // 4'b1000
+Bool geq = a >= b; // False
+
+Bit#(1) any1 = |a; // 1'b1
+Bit#(1) ev1s = ^a; // 1'b0
+\end{mscode}
+\vspace{-2em}
+\end{wrapfigure}
+
+\verb|Bit#(n)| represents an \verb|n|-bit value.
+The parameter \verb|n| must be a non-negative \verb|Integer|.
+
+\paragraph{Bitwise logical operations:}
+\verb|Bit#(n)| supports bitwise inversion/NOT (\verb|~|), AND (\verb|&|), OR (\texttt{|}), XOR (\verb|^|), and XNOR(\verb|~^| or \verb|^~|).
+Bitwise logical operations take \verb|Bit#(n)| inputs and produce a \verb|Bit#(n)| output, where the operations apply to each bit of the inputs.
+
+\paragraph{Arithmetic and relational operations:}
+\verb|Bit#(n)| supports all arithmetic and relational operators.
+These operations treat \verb|Bit#(n)| values as \emph{unsigned integers}.
+
+\paragraph{Bit reduction operations:}
+\verb|Bit#(n)| supports AND (\verb|&|), OR (\texttt{|}), and XOR (\verb|^|) reductions.
+Bit reductions are unary operations that take a \verb|Bit#(n)| input
+and return a \verb|Bit#(1)| output that results
+from reducing the bits of the input using the specified operation.
+For example, given \verb|Bit#(4) a|, \verb|&a| is eauivalent to \verb|a[3] & a[2] & a[1] & a[0]|.
+
+\paragraph{Converting to and from \texttt{Bit\#(n)}:}
+All types except \texttt{Integer} are ultimately represented as a collection of bits in hardware, and can be converted to and from \texttt{Bit\#(n)}.
+The built-in function \verb|pack| converts to \verb|Bit#(n)|,
+and \verb|unpack| converts from \verb|Bit#(n)|, as shown below.
+
+\begin{mscode}
+typedef enum Color {Red, Green, Blue};
+Color c = Red;
+Bit#(2) x = pack(c);      // 2'b00, the binary representation of Red
+Color g = unpack(x + 1);  // Green, whose binary representation is 2'b00
+Color u = unpack(x + 3);  // unspecified value, as no Color corresponds to 2'b11
+\end{mscode}
+
+\paragraph{Bit selection:}
+Given a \verb|Bit#(n)| variable \verb|x|,
+\verb|x[i]| selects the \verb|i|$^{th}$ bit of \verb|x|.
+\verb|x[i]| has type \verb|Bit#(1)|.
+
+Bits are enumerated \emph{right-to-left, i.e., starting from the least-significant bit}.
+For example, given \verb|Bit#(4) x = 4'b1010|,
+then \verb|x[0] = 0| (the least-significant or rightmost bit), 
+\verb|x[1] = 1|, \verb|x[2] = 0|,
+and \verb|x[3] = 1| (the most-significant or leftmost bit).
+This is consistent with how digits are always enumerated in a number (according to significance, so the value is $\sum_{i=0}^{n-1}2^ix[i]$),
+but is different from how vectors are indexed.
+
+The selector \verb|i| in \verb|x[i]| can be a literal, an \verb|Integer|, or a \verb|Bit#(k)| variable. In the first two cases the bit selected is constant,
+which results in an efficient hardware implementation (as no logic gates are required).
+In the last case the bit selected is variable, and will reuire more hardware to implement.
+
+Given a \verb|Bit#(n)| variable \verb|x|,
+\verb|x[i:j]|, with \verb|i| $\geq$ \verb|j|, selects the range of bits of \verb|x|
+starting at \verb|x[i]| and ending at \verb|x[j]|, both inclusive.
+When the difference between \verb|i| and \verb|j| is known at compile time,
+\verb|x[i:j]| has type \verb|Bit#(i-j+1)|.
+Otherwise, the bit-width of the selected slice is unknown at compile time,
+and on a size mismatch with the destination variable,
+the slice will be padded with zeros if the destination is wider,
+and the slice will be truncated from the left if the destination is narrower.
+
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-2em}
+\begin{mscode}
+Bit#(2) a = 2'b11;
+Bit#(4) b = 4'b1001;
+Bit#(3) c = 3'b010;
+Bit#(9) x = 
+  {a, b, c};  // 9'b111001010
+let y = {a, c};   // 5'b11010
+let z = {1'b1, a};  // 3'b111
+\end{mscode}
+\vspace{-2.5em}
+\end{wrapfigure}
+
+\paragraph{Bit concatenation:}
+Given two or more \verb|Bit#()| values $\texttt{x}_\texttt{1},...,\texttt{x}_\texttt{k}$,
+$\texttt{\{x}_\texttt{1},...,\texttt{x}_\texttt{k}\texttt{\}}$ concatenates these values. The result has type \verb|Bit#(s)|, where \verb|s| is the sum of the bit-widths of all concatenated elements.
+
+Bit concatenation can take at most one unsized number literal,
+and will infer the width of that literal to match the widths
+of the concatenated value and the required type, as shown in the examples below.
+
+\begin{mscode}
+Bit#(2) a = 2'b11;
+Bit#(8) i = {a, 0};            // 8'b1100_0000, as 0 is inferred to be 6 bits
+Bit#(8) j = {2'b11, 0, 1'b1};  // 8'b1100_0001, as 0 is inferred to be 5 bits
+Bit#(8) k = {~0, ~a, a};       // 8'b1111_0011, as 0 is inferred to be 4 bits
+Bit#(8) k = {0, 10};           // Error, can't deduce the sizes of two unsized literals
+\end{mscode}
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-2em}
+\begin{mscode}
+Bit#(4) a = 4'b1001;
+
+Bit#(2) x = truncate(a);
+            // 2'b01
+Bit#(6) y = zeroExtend(a);
+            // 6'b001001
+Bit#(6) z = signExtend(a);
+            // 6'b111001
+Bit#(6) w = signExtend(x);
+            // 6'b000001
+\end{mscode}
+\vspace{-2.5em}
+\end{wrapfigure}
+
+\paragraph{Truncation and extension:}
+The built-in function \verb|truncate| truncates the most-significant bits of its argument to match the bit-width of a narrower destination. \verb|zeroExtend| adds zeros to the 
+
+\subsection{Integer}
+\label{sec:integer}
+
+\verb|Integer| represents an integer value (i.e., a negative or non-negative number) with an unbounded number of bits.
+\verb|Integer| supports the same unary and binary operators as \verb|Bit#(n)|. However, since \verb|Integer| is signed,
+arithmetic and relational operators have signed semantics.
+
+\verb|Integer| is the only type in Minispec that is not synthesizable to hardware, and it is used exclusively at compile time:
+all \verb|Integer| expressions must be evaluable by the compiler.
+%---intuitively,
+%the compiler replaces all \verb|Integer| variables by unsized number literals.
+% TODO: The discussion of Integers vs unsized number literals is confucing at this point. BSV had this weird dychotomy, my guess is b/c of numeric types.
+% But we can say that unsized number lits -> Integer lits (and sized -> Bit#(n) lits), because that's precisely what's going on!
+%As a result, while \verb|Integer| values can be converted to \verb|Bit#(n)| (and this conversion is in fact implicit),
+%\verb|Bit#(n)| values, which are not necessarily known statically, cannot be converted to \verb|Integer|.
+\autoref{sec:parametrics} explains precisely how \verb|Integer| values are evaluated at compile time.
+
+\subsection{Vector\#(n,T)}
+\label{sec:vector}
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-5em}
+\begin{mscode}
+Vector#(4, Bool) lessThanTwo;
+for (Integer i=0; i<4; i=i+1)
+  lessThanTwo[i] = i < 2;
+
+// Static selection
+Bool a = lessThanTwo[3];
+Integer i = 1;
+Bool b = lessThanTwo[i+1];
+// Error, out-of-bounds
+Bool c = lessThanTwo[i+3];
+
+// Dynamic selection
+Bit#(3) j = 3'd1;
+Bool d = lessThanTwo[j];
+// Undefined, out-of-bounds
+Bool e = lessThanTwo[j+3];
+\end{mscode}
+\vspace{-4.5em}
+\end{wrapfigure}
+
+% dsm: Deferred
+%// Vector of submodules
+%module Example;
+%  // Vector of 4 8-bit regs,
+%  // all initialized to 0
+%  Vector#(4, Reg#(Bit#(8)))
+%    regVector(4'd0);
+%  [...]
+%endmodule
+
+\verb|Vector#(n, T)| represents a vector or array of \verb|n| elements of type \verb|T|.
+
+\paragraph{Element selection:} 
+Given a \verb|Vector#(n,T)| variable \verb|v|,
+\verb|v[i]| selects the \verb|i|$^{th}$ bit of \verb|v|.
+\verb|v[i]| has type \verb|T|.
+
+The selector \verb|i| in \verb|v[i]| can be a literal, an \verb|Integer|, or a \verb|Bit#(k)| variable.
+As in bit selection (\autoref{sec:bit}), only the last of the three cases results in dynamic selection,
+which requires more hardware.
+
+Static and dynamic element selection have different guarantees with respect to out-of-bounds accesses.
+Static selectors are always checked by the compiler,
+so the compiler will flag any \verb|v[i]| with \verb|i >= n| as an out-of-bounds error.
+Dynamic selectors are not checked, so \verb|v[i]| with \verb|i >= n| will return an unspecified element.
+
+\paragraph{Initialization:} Vector variables need not be initialized when declared,
+and can be initialized element-by-element.
+
+Modules (\autoref{sec:modules}) can instantiate \emph{Vectors of submodules}.
+In this case, the vector is initialized with the same syntax as submodule instantiation (\autoref{sec:submodules}):
+\verb|Vector#(n,T) vectorName(submoduleArg1, ..., submoduleArgK);|. Submodule arguments are passed to all submodules.
+
+\paragraph{Other vector functions:} \verb|Vector#(n,T)| is a BSV type.
+Appendix C.3 of the \href{TODO}{BSV reference} describes several functions for working with vectors,
+which can also be used in Minispec code.
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-4em}
+\begin{mscode}
+// Creating Maybe#(T)'s
+Maybe#(Bit#(1)) a = Valid(1);
+Maybe#(Bit#(4)) b = Invalid;
+
+// Validity checking
+Bool aValid = isValid(a);
+
+// Unpacking Maybe#(T)'s
+let x = fromMaybe(0, a); // 1
+let y = fromMaybe(4, b); // 4
+
+// Common unpacking idiom:
+// the if condition checks
+// validity, so fromMaybe's
+// arg is always valid and the
+// default value is irrelevant
+if (isValid(a)) begin
+  let aVal = fromMaybe(?, a);
+  [...]
+end
+\end{mscode}
+\vspace{-5em}
+\end{wrapfigure}
+
+\subsection{Maybe\#(T)}
+\label{sec:maybe}
+
+\verb|Maybe#(T)| represents an optional value of type \verb|T|.
+A \verb|Maybe#(T)| can be either \verb|Valid| if it holds a value of type \verb|T|,
+or \verb|Invalid| if it does not hold a value.
+\verb|Maybe#(T)| is especially useful for modules (\autoref{sec:modules}),
+which often do not have valid inputs or outputs every cycle.
+
+\paragraph{Creating \texttt{Maybe\#(T)} values:} Given a value \verb|v| of type \verb|T|,
+\verb|Valid(v)| is a valid \verb|Maybe#(T)| that holds \verb|v|.
+The literal \verb|Invalid| can be assigned to any \verb|Maybe#(T)|
+variable to make it invalid.
+
+\paragraph{Checking for validity:}
+The built-in function \verb|isValid| returns \verb|True| if its argument is \verb|Valid|,
+and \verb|False| if it is \verb|Invalid|.
+
+\paragraph{Unpacking \texttt{Maybe\#(T)}'s optional value:}
+The built-in function \verb|fromMaybe| allows extracting the value of a valid Maybe value.
+Its signature is 
+\verb|T fromMaybe(T defaultValue, Maybe#(T) x)|.
+If \verb|x| is \verb|Valid|, \verb|fromMaybe| returns \verb|x|'s value; if \verb|x| is \verb|Invalid|, \verb|fromMaybe| returns \verb|defaultValue|.
+
+

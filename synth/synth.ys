@@ -1,0 +1,41 @@
+$READVERILOGCMDS
+
+hierarchy -top $MODNAME;
+proc;
+flatten; opt
+fsm;
+memory;
+techmap; opt
+
+# Optimized mapping using ABC (gives area and timing)
+# NOTE(dsm): I think the current ABC defaults aren't that good; -fast does a
+# bit better though it's supposed to be worse. Use a custom -script file?
+# UPDATE(dsm): Tried tweaking the default script file; overall:
+# - dc2 (AIG simplification) tends to decrease area but adds delay.
+# - if (FPGA mapping!!) using large LUTs (see rec_add3 in abc.rc on the abd
+#   source code) lowers delay but adds area.
+# - buffer currently inserts buffers even if we are under our delay target.
+# - &nf (tech mapping) has an area parameter (-Q) that's not being used.
+# We could use all these to to more sophisticated mapping over multiple rounds.
+# However, for now let's keep it simple---esp. with FPGA mapping, the generated
+# circuits can be perplexing.
+#dfflibmap -prepare -liberty $STDCELLFILE
+dfflibmap -liberty $STDCELLFILE
+abc -liberty $STDCELLFILE -constr $CONSTRFILE -D $DELAY -dff -clk CLK -script $OUTDIR/abc.script
+#dfflibmap -liberty $STDCELLFILE
+
+# ABC leaves a bunch of unused nets
+# dsm: Don't eliminate them though, now we use them for name demangling
+#opt
+
+# Reporting
+stat
+
+# Save BLIF file so we can postprocess ABC output to get the Bluespec signal names
+write_blif $OUTDIR/out.blif
+
+# Save Verilog file so we can analyze the memories in the design (NOTE: Can't be a .v file)
+write_verilog $OUTDIR/out.verilog
+
+clean
+$POST

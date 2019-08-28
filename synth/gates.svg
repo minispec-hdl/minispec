@@ -1,0 +1,397 @@
+<svg  xmlns="http://www.w3.org/2000/svg"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:s="https://github.com/nturley/netlistsvg"
+  xmlns:s="https://6004.mit.edu">
+  <s:properties>
+    <s:layoutEngine
+      org.eclipse.elk.algorithm="layered"
+      org.eclipse.elk.layered.spacing.nodeNodeBetweenLayers="15"
+      org.eclipse.elk.spacing.nodeNode= "10"
+      org.eclipse.elk.layered.layering.strategy= "LONGEST_PATH"
+    />
+    <s:low_priority_alias val="$dff" />
+  </s:properties>
+<style>
+svg {
+  stroke:#000;
+  fill:none;
+}
+text {
+  fill:#000;
+  stroke:none;
+  font-size:10px;
+  font-weight: bold;
+  font-family: "Courier New", monospace;
+}
+.nodelabel {
+  text-anchor: middle;
+}
+.inputPortLabel {
+  text-anchor: end;
+}
+.splitjoinBody {
+  fill:#000;
+}
+.noninv {
+  fill:#EEF;
+}
+</style>
+  <!-- and -->
+  <g s:type="AND2" transform="translate(150,50)" s:width="30" s:height="25">
+    <s:alias val="AND2"/>
+    <s:alias val="AND2_X1"/>
+    <s:alias val="AND2_X2"/>
+    <s:alias val="AND2_X4"/>
+
+    <path d="M0,0 L0,25 L15,25 A15 12.5 0 0 0 15,0 Z" class="noninv"/>
+
+    <g s:x="0" s:y="5" s:pid="A1"/>
+    <g s:x="0" s:y="20" s:pid="A2"/>
+    <g s:x="30" s:y="12.5" s:pid="ZN"/>
+  </g>
+  <g s:type="NAND2" transform="translate(150,100)" s:width="30" s:height="25">
+    <s:alias val="NAND2"/>
+    <s:alias val="NAND2_X1"/>
+    <s:alias val="NAND2_X2"/>
+    <s:alias val="NAND2_X4"/>
+
+    <path d="M0,0 L0,25 L15,25 A15 12.5 0 0 0 15,0 Z"/>
+    <circle cx="34" cy="12.5" r="3" />
+
+    <g s:x="0" s:y="5" s:pid="A1"/>
+    <g s:x="0" s:y="20" s:pid="A2"/>
+    <g s:x="36" s:y="12.5" s:pid="ZN"/>
+  </g>
+
+  <!-- or -->
+  <g s:type="OR2" transform="translate(250,50)" s:width="30" s:height="25">
+    <s:alias val="OR2"/>
+    <s:alias val="OR2_X1"/>
+    <s:alias val="OR2_X2"/>
+    <s:alias val="OR2_X4"/>
+
+    <path d="M0,25 L0,25 L15,25 A15 12.5 0 0 0 15,0 L0,0" class="noninv"/>
+    <path d="M0,0 A30 25 0 0 1 0,25" />
+
+    <g s:x="3" s:y="5" s:pid="A1"/>
+    <g s:x="3" s:y="20" s:pid="A2"/>
+    <g s:x="30" s:y="12.5" s:pid="ZN"/>
+  </g>
+  <g s:type="NOR2" transform="translate(250, 100)" s:width="33" s:height="25">
+    <s:alias val="NOR2"/>
+    <s:alias val="NOR2_X1"/>
+    <s:alias val="NOR2_X2"/>
+    <s:alias val="NOR2_X4"/>
+
+    <path d="M0,25 L0,25 L15,25 A15 12.5 0 0 0 15,0 L0,0"/>
+    <path d="M0,0 A30 25 0 0 1 0,25" />
+    <circle cx="34" cy="12.5" r="3" />
+
+    <g s:x="3" s:y="5" s:pid="A1"/>
+    <g s:x="3" s:y="20" s:pid="A2"/>
+    <g s:x="36" s:y="12.5" s:pid="ZN"/>
+  </g>
+
+  <!--xor -->
+  <g s:type="XOR2" transform="translate(350, 50)" s:width="33" s:height="25">
+    <s:alias val="XOR2"/>
+    <s:alias val="XOR2_X1"/>
+    <s:alias val="XOR2_X2"/>
+    <s:alias val="XOR2_X4"/>
+
+    <path d="M3,0 A30 25 0 0 1 3,25 A30 25 0 0 0 33,12.5 A30 25 0 0 0 3,0" />
+    <path d="M0,0 A30 25 0 0 1 0,25" />
+
+    <g s:x="3" s:y="5" s:pid="A"/>
+    <g s:x="3" s:y="20" s:pid="B"/>
+    <g s:x="33" s:y="12.5" s:pid="Z"/>
+  </g>
+  <g s:type="XNOR2" transform="translate(350, 100)" s:width="33" s:height="25">
+    <s:alias val="XNOR2"/>
+    <s:alias val="XNOR2_X1"/>
+    <s:alias val="XNOR2_X2"/>
+    <s:alias val="XNOR2_X2"/>
+
+    <path d="M3,0 A30 25 0 0 1 3,25 A30 25 0 0 0 33,12.5 A30 25 0 0 0 3,0" />
+    <path d="M0,0 A30 25 0 0 1 0,25" />
+    <circle cx="35" cy="12.5" r="3" />
+
+    <g s:x="3" s:y="5" s:pid="A"/>
+    <g s:x="3" s:y="20" s:pid="B"/>
+    <g s:x="38" s:y="12.5" s:pid="ZN"/>
+  </g>
+
+  <!--buffer -->
+  <g s:type="BUF" transform="translate(450,50)" s:width="30" s:height="20">
+    <s:alias val="BUF"/>
+    <s:alias val="BUF_X1"/>
+    <s:alias val="BUF_X2"/>
+    <s:alias val="BUF_X4"/>
+    <s:alias val="BUF_X8"/>
+    <s:alias val="BUF_X16"/>
+    <s:alias val="BUF_X32"/>
+
+    <path d="M0,0 L0,20 L20,10 Z" class="noninv"/>
+
+    <g s:x="0" s:y="10" s:pid="A"/>
+    <g s:x="20" s:y="10" s:pid="Z"/>
+  </g>
+  
+  <g s:type="INV" transform="translate(450,100)" s:width="30" s:height="20">
+    <s:alias val="INV"/>
+    <s:alias val="INV_X1"/>
+    <s:alias val="INV_X2"/>
+    <s:alias val="INV_X4"/>
+    <s:alias val="INV_X8"/>
+    <s:alias val="INV_X16"/>
+    <s:alias val="INV_X32"/>
+
+    <path d="M0,0 L0,20 L20,10 Z" />
+    <circle cx="23" cy="10" r="3" />
+
+    <g s:x="0" s:y="10" s:pid="A"/>
+    <g s:x="25" s:y="10" s:pid="ZN"/>
+  </g>
+
+  <g s:type="add" transform="translate(50, 150)" s:width="25" s:height="25">
+    <s:alias val="$add"/>
+
+    <circle r="12.5" cx="12.5" cy="12.5" />
+    <line x1="7.5" x2="17.5" y1="12.5" y2="12.5" />
+    <line x1="12.5" x2="12.5" y1="7.5" y2="17.5" />
+
+    <g s:x="3" s:y="5" s:pid="A"/>
+    <g s:x="3" s:y="20" s:pid="B"/>
+    <g s:x="25" s:y="12.5" s:pid="Y"/>
+  </g>
+
+  <g s:type="sub" transform="translate(150,150)" s:width="25" s:height="25">
+    <s:alias val="$sub"/>
+
+    <circle r="12.5" cx="12.5" cy="12.5" />
+    <line x1="7.5" x2="17.5" y1="12.5" y2="12.5" />
+
+    <g s:x="3" s:y="5" s:pid="A"/>
+    <g s:x="3" s:y="20" s:pid="B"/>
+    <g s:x="25" s:y="12.5" s:pid="Y"/>
+  </g>
+  <g s:type="eq" transform="translate(250,150)" s:width="25" s:height="25">
+    <s:alias val="$eq"/>
+
+    <circle r="12.5" cx="12.5" cy="12.5" />
+    <line x1="7.5" x2="17.5" y1="10" y2="10" />
+    <line x1="7.5" x2="17.5" y1="15" y2="15" />
+
+    <g s:x="3" s:y="5" s:pid="A"/>
+    <g s:x="3" s:y="20" s:pid="B"/>
+    <g s:x="25" s:y="12.5" s:pid="Y"/>
+  </g>
+
+  <g s:type="dff" transform="translate(350,150)" s:width="30" s:height="40">
+    <s:alias val="DFF"/>
+    <s:alias val="DFF_X1"/>
+    <s:alias val="DFF_X2"/>
+
+    <rect width="30" height="40" x="0" y="0"/>
+    <path d="M0,35 L5,30 L0,25"/>
+
+    <g s:x="30" s:y="10" s:pid="Q"/>
+    <g s:x="30" s:y="30" s:pid="QN"/>
+    <g s:x="0" s:y="30" s:pid="CK"/>
+    <g s:x="0" s:y="10" s:pid="D"/>
+  </g>
+
+  <g s:type="inputExt" transform="translate(50,200)" s:width="30" s:height="20">
+    <text x="15" y="-4" class="nodelabel" s:attribute="ref">input</text>
+    <s:alias val="$_inputExt_"/>
+    <path d="M0,0 L0,20 L15,20 L30,10 L15,0 Z" />
+    <g s:x="28" s:y="10" s:pid="Y"/>
+  </g>
+
+  <g s:type="constant" transform="translate(150,200)" s:width="30" s:height="20">
+    <text x="15" y="-4" class="nodelabel" s:attribute="ref">constant</text>
+
+    <s:alias val="$_constant_"/>
+    <rect width="30" height="20" />
+
+    <g s:x="30" s:y="10" s:pid="Y"/>
+  </g>
+
+  <g s:type="outputExt" transform="translate(250,200)" s:width="30" s:height="20">
+    <text x="15" y="-4" class="nodelabel" s:attribute="ref">output</text>
+    <s:alias val="$_outputExt_"/>
+    <path d="M30,0 L30,20 L15,20 L0,10 L15,0 Z" />
+
+    <g s:x="0" s:y="10" s:pid="A"/>
+  </g>
+
+  <g s:type="split" transform="translate(350,200)" s:width="5" s:height="40">
+    <rect width="5" height="40" class="splitjoinBody" s:generic="body"/>
+    <s:alias val="$_split_"/>
+
+    <g s:x="0" s:y="20" s:pid="in"/>
+    <g transform="translate(5, 10)" s:x="4" s:y="10" s:pid="out0">
+      <text x="5" y="-4" >hi:lo</text>
+    </g>
+    <g transform="translate(5, 30)" s:x="4" s:y="30" s:pid="out1">
+      <text x="5" y="-4" >hi:lo</text>
+    </g>
+  </g>
+
+  <g s:type="join" transform="translate(450,200)" s:width="4" s:height="40">
+    <rect width="5" height="40" class="splitjoinBody" s:generic="body"/>
+    <s:alias val="$_join_"/>
+    <g s:x="5" s:y="20"  s:pid="out"/>
+    <g transform="translate(0, 10)" s:x="0" s:y="10" s:pid="in0">
+      <text x="-3" y="-4" class="inputPortLabel">hi:lo</text>
+    </g>
+    <g transform="translate(0, 30)" s:x="0" s:y="30" s:pid="in1">
+      <text x="-3" y="-4" class="inputPortLabel">hi:lo</text>
+    </g>
+  </g>
+
+  <g s:type="generic" transform="translate(550,200)" s:width="30" s:height="40">
+    <text x="15" y="-4" class="nodelabel" s:attribute="ref">generic</text>
+    <rect width="30" height="40" s:generic="body"/>
+
+    <g transform="translate(30, 10)" s:x="30" s:y="10" s:pid="out0">
+      <text x="5" y="-4" style="fill:#000; stroke:none">out0</text>
+    </g>
+    <g transform="translate(30, 30)" s:x="30" s:y="30" s:pid="out1">
+      <text x="5" y="-4" style="fill:#000;stroke:none">out1</text>
+    </g>
+    <g transform="translate(0, 10)" s:x="0" s:y="10" s:pid="in0">
+      <text x="-3" y="-4" class="inputPortLabel">in0</text>
+    </g>
+    <g transform="translate(0, 30)" s:x="0" s:y="30" s:pid="in1">
+      <text x="-3" y="-4" class="inputPortLabel">in1</text>
+    </g>
+  </g>
+
+  <!-- and3 -->
+  <g s:type="AND3" transform="translate(150,250)" s:width="30" s:height="25">
+    <s:alias val="AND3"/>
+    <s:alias val="AND3_X1"/>
+    <s:alias val="AND3_X2"/>
+    <s:alias val="AND3_X4"/>
+
+    <path d="M0,0 L0,25 L15,25 A15 12.5 0 0 0 15,0 Z" class="noninv"/>
+
+    <g s:x="0" s:y="4" s:pid="A1"/>
+    <g s:x="0" s:y="12.5" s:pid="A2"/>
+    <g s:x="0" s:y="21" s:pid="A3"/>
+    <g s:x="30" s:y="12.5" s:pid="ZN"/>
+  </g>
+  <g s:type="NAND3" transform="translate(150,300)" s:width="30" s:height="25">
+    <s:alias val="NAND3"/>
+    <s:alias val="NAND3_X1"/>
+    <s:alias val="NAND3_X2"/>
+    <s:alias val="NAND3_X4"/>
+
+    <path d="M0,0 L0,25 L15,25 A15 12.5 0 0 0 15,0 Z"/>
+    <circle cx="34" cy="12.5" r="3" />
+
+    <g s:x="0" s:y="4" s:pid="A1"/>
+    <g s:x="0" s:y="12.5" s:pid="A2"/>
+    <g s:x="0" s:y="21" s:pid="A3"/>
+    <g s:x="36" s:y="12.5" s:pid="ZN"/>
+  </g>
+
+
+  <!-- or3 -->
+  <g s:type="OR3" transform="translate(250,250)" s:width="30" s:height="25">
+    <s:alias val="OR3"/>
+    <s:alias val="OR3_X1"/>
+    <s:alias val="OR3_X2"/>
+    <s:alias val="OR3_X4"/>
+
+    <path d="M0,25 L0,25 L15,25 A15 12.5 0 0 0 15,0 L0,0" class="noninv"/>
+    <path d="M0,0 A30 25 0 0 1 0,25" />
+
+    <g s:x="3" s:y="4" s:pid="A1"/>
+    <g s:x="4" s:y="12.5" s:pid="A2"/>
+    <g s:x="3" s:y="21" s:pid="A3"/>
+    <g s:x="30" s:y="12.5" s:pid="ZN"/>
+  </g>
+  <g s:type="NOR3" transform="translate(250, 300)" s:width="33" s:height="25">
+    <s:alias val="NOR3"/>
+    <s:alias val="NOR3_X1"/>
+    <s:alias val="NOR3_X2"/>
+    <s:alias val="NOR3_X4"/>
+
+    <path d="M0,25 L0,25 L15,25 A15 12.5 0 0 0 15,0 L0,0"/>
+    <path d="M0,0 A30 25 0 0 1 0,25" />
+    <circle cx="34" cy="12.5" r="3" />
+
+    <g s:x="3" s:y="4" s:pid="A1"/>
+    <g s:x="4" s:y="12.5" s:pid="A2"/>
+    <g s:x="3" s:y="21" s:pid="A3"/>
+    <g s:x="36" s:y="12.5" s:pid="ZN"/>
+  </g>
+
+  <!-- and4 -->
+  <g s:type="AND4" transform="translate(150,350)" s:width="30" s:height="25">
+    <s:alias val="AND4"/>
+    <s:alias val="AND4_X1"/>
+    <s:alias val="AND4_X2"/>
+    <s:alias val="AND4_X4"/>
+
+    <path d="M0,0 L0,25 L15,25 A15 12.5 0 0 0 15,0 Z" class="noninv"/>
+
+    <g s:x="0" s:y="3.5" s:pid="A1"/>
+    <g s:x="0" s:y="9.5" s:pid="A2"/>
+    <g s:x="0" s:y="15.5" s:pid="A3"/>
+    <g s:x="0" s:y="21.5" s:pid="A4"/>
+    <g s:x="30" s:y="12.5" s:pid="ZN"/>
+
+  </g>
+  <g s:type="NAND4" transform="translate(150,400)" s:width="30" s:height="25">
+    <s:alias val="NAND4"/>
+    <s:alias val="NAND4_X1"/>
+    <s:alias val="NAND4_X2"/>
+    <s:alias val="NAND4_X4"/>
+
+    <path d="M0,0 L0,25 L15,25 A15 12.5 0 0 0 15,0 Z"/>
+    <circle cx="34" cy="12.5" r="3" />
+
+    <g s:x="0" s:y="3.5" s:pid="A1"/>
+    <g s:x="0" s:y="9.5" s:pid="A2"/>
+    <g s:x="0" s:y="15.5" s:pid="A3"/>
+    <g s:x="0" s:y="21.5" s:pid="A4"/>
+    <g s:x="36" s:y="12.5" s:pid="ZN"/>
+  </g>
+
+
+  <!-- or3 -->
+  <g s:type="OR4" transform="translate(250,350)" s:width="30" s:height="25">
+    <s:alias val="OR4"/>
+    <s:alias val="OR4_X1"/>
+    <s:alias val="OR4_X2"/>
+    <s:alias val="OR4_X4"/>
+
+    <path d="M0,25 L0,25 L15,25 A15 12.5 0 0 0 15,0 L0,0" class="noninv"/>
+    <path d="M0,0 A30 25 0 0 1 0,25" />
+
+    <g s:x="3" s:y="3.5" s:pid="A1"/>
+    <g s:x="4" s:y="9.5" s:pid="A2"/>
+    <g s:x="4" s:y="15.5" s:pid="A3"/>
+    <g s:x="3" s:y="21.5" s:pid="A4"/>
+    <g s:x="30" s:y="12.5" s:pid="ZN"/>
+  </g>
+  <g s:type="NOR4" transform="translate(250,400)" s:width="33" s:height="25">
+    <s:alias val="NOR4"/>
+    <s:alias val="NOR4_X1"/>
+    <s:alias val="NOR4_X2"/>
+    <s:alias val="NOR4_X4"/>
+
+    <path d="M0,25 L0,25 L15,25 A15 12.5 0 0 0 15,0 L0,0"/>
+    <path d="M0,0 A30 25 0 0 1 0,25" />
+    <circle cx="34" cy="12.5" r="3" />
+
+    <g s:x="3" s:y="3.5" s:pid="A1"/>
+    <g s:x="4" s:y="9.5" s:pid="A2"/>
+    <g s:x="4" s:y="15.5" s:pid="A3"/>
+    <g s:x="3" s:y="21.5" s:pid="A4"/>
+    <g s:x="36" s:y="12.5" s:pid="ZN"/>
+  </g>
+</svg>

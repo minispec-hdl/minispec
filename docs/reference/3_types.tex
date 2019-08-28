@@ -1,0 +1,127 @@
+\section{Overview of Types}
+\label{sec:types}
+
+Minispec is a \emph{strongly typed} language with \emph{static type checking}:
+every variable and expression has a \emph{type},
+and that type must be known statically, i.e., at compile time.
+Variables must be assigned values with compatible types.
+
+\paragraph{Built-in types:} Minispec provides five basic, built-in types:
+\begin{compactitem}
+\item \texttt{Bool} represents a Boolean value, which can be either \texttt{True} or \texttt{False}.
+\item \texttt{Bit\#(n)} represents an n-bit value.
+\item \texttt{Vector\#(n, T)} represents a collection of n values of type T.
+\item \texttt{Maybe\#(T)} represents an optional value of type T.
+\item \texttt{Integer} represents an integer value with an unbounded number of bits.
+\end{compactitem}
+\autoref{sec:builtin} describes and illustrates the use of these types in detail.
+All types except \texttt{Integer} are ultimately represented as a collection of bits in hardware,
+and can be converted to and from \texttt{Bit\#(n)} (\autoref{sec:bit}).
+\texttt{Integer} is special: it cannot be synthesized into hardware
+%(it has an unbounded number of bits!)
+and can only be used at compile time.
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-2.8em}
+\begin{mscode}
+// A 16-bit value
+Bit#(16) halfWord;
+
+// A Vector of 8 Bools
+Vector#(8, Bool) boolVec;
+
+// A Vector of 16 Bit#(32)s
+Vector#(16, Bit#(32)) wordVec;
+\end{mscode}
+\vspace{-2em}
+\end{wrapfigure}
+
+\paragraph{Parametric types:} Types of the form \texttt{Type\#($\rho_1$,...,$\rho_n$)} are called parametric types
+(also known as polymorphic types, generics, or templated types in other languages).
+Parametric types take one or more parameters ($\rho_i$), which can be either \texttt{Integer} values or other types.
+These parameters must be known at compile time, and make the type concrete.
+Several of the built-in types are parametric, as shown in the examples.
+
+Beyond parametric types, Minispec also supports parametric functions, modules, structs, and type synonyms
+using a consistent syntax and semantics, which \autoref{sec:parametrics} describes in detail.
+
+\paragraph{User-defined types:} Minispec supports three kinds of user-defined types:
+\begin{compactitem}
+\item \emph{Type synonyms} allow giving a different name to a type.
+\item \emph{Structs} represent collections of values.
+\item \emph{Enumerations} or enums allow defining a set of unique symbolic constants, also called labels.
+\end{compactitem}
+\autoref{sec:userdefined} describes user-defined types in detail.
+
+\paragraph{Type conversions are explicit, except for Integers:}
+Unlike in some languages, in Minispec almost all conversions between values of different types are explicit.
+For example, it is illegal to assign a \texttt{Bool} value to a \texttt{Bit\#(1)} variable (or viceversa),
+even though both take one bit to represent.
+Similarly, it is illegal to assign \texttt{Bit\#(4)} value to a \texttt{Bit\#(8)} variable, because they have a different number of bits
+and implicit bit-width extensions \emph{never} happen.
+This makes code more verbose but reduces mistakes.
+
+\begin{mscode}
+Bool b = True;
+Bit#(1) x = b;  // Error, cannot convert from Bool to Bit#(1)
+Bit#(1) y = b? 1 : 0;  // OK, uses ternary operator to convert explicitly
+
+Bit#(4) i = 12;
+Bit#(8) j = i;  // Error, mismatched bit-widths 4 and 8
+Bit#(8) k = {0, i};  // OK, uses concatenation to zero-extend i
+\end{mscode}
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-1.8em}
+\begin{mscode}
+Integer n = 3 * 4;  // n=12
+Bit#(8) x = n;      // OK
+Bit#(n) y = n * n;  // OK
+\end{mscode}
+\vspace{-2em}
+\end{wrapfigure}
+
+% TODO: May want to move to parametrics
+\texttt{Integer} values are the single exception to this rule:
+\texttt{Integer} values can be assigned to \texttt{Bit\#(n)} variables without explicit conversion.
+In fact, \texttt{Integer}s can be used anywhere a unsized number literal would work,
+as shown in the examples.
+
+%An intuitive way to remember this exception is to think of the compiler as evaluating all \texttt{Integer} expressions,
+%computing their corresponding unsized number literals.
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-1.5em}
+\begin{mscode}
+Bit#(4) x = 1;   
+let y = x;       // Bit#(4)
+let z = {x, x};  // Bit#(8)
+let w = 2'b11;   // Bit#(2)
+let n = 42;      // Integer
+\end{mscode}
+\vspace{-3em}
+\end{wrapfigure}
+
+% dsm: Eh, whatever
+%// Error, can't infer a's
+%// width because 0 is unsized
+%let a = {0, x}
+
+\paragraph{Type inference:} Minispec allows omitting a variable's type by using the \texttt{let} keyword.
+The compiler will infer the variable's type from the expression assigned to the variable.
+
+% dsm: Yes, this goes into expressions
+%(TODO: expresssions??)
+%Built-in operators:
+%- Boolean
+%- Logical
+%- Arithmetic
+%- Relational
+%- Ternary
+%- Case
+%- Slicing and concatenation
+%- Structs?
+%- Calls
+
+%Working with Bit(n)
+

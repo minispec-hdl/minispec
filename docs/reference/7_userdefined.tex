@@ -1,0 +1,131 @@
+\section{User-Defined Types}
+\label{sec:userdefined}
+
+\subsection{Type synonyms}
+\label{sec:synonyms}
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-2em}
+\begin{mscode}
+typedef Bit#(8) Byte;
+Byte x = 8'd1;
+\end{mscode}
+\vspace{-2em}
+\end{wrapfigure}
+
+Type synonyms allow giving a different name to an existing type. Their syntax is:
+\begin{center}
+\verb|typedef Type NewType;|
+\end{center}
+where \verb|Type| is any existing type, and \verb|NewType| is the new type's name.
+Type synonyms are a convenience feature. The original type and its synonym can be used interchangeably,
+e.g., without any type conversions on assignments.
+
+Type synonyms can be parametric; see \autoref{sec:parametrics} for details.
+
+\subsection{Structs}
+\label{sec:structs}
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-4.5em}
+\begin{mscode}
+// Definition
+typedef struct {
+  Byte red;
+  Byte green;
+  Byte blue;
+} Pixel;
+
+// Creation
+Pixel cyan = Pixel{
+  red : 0,
+  green : 255,
+  blue : 255
+};
+
+// Member access
+Bit#(10) intensity =
+  zeroExtend(cyan.red) +
+  zeroExtend(cyan.green) +
+  zeroExtend(cyan.blue);
+
+// Assignment
+Pixel white = cyan;
+white.red = 255;
+\end{mscode}
+\vspace{-6em}
+\end{wrapfigure}
+
+Structs are composite types (also known as product types):
+they represent a group of \emph{members} of different types.
+
+\paragraph{Definition:} Struct definitions use the following syntax:
+\begin{center}
+\verb|typedef struct {| \\
+\verb|  Type1 member1;| \\
+\verb|  Type2 member2;| \\
+\verb|      ...       | \\
+\verb|  TypeN memberN;| \\
+\verb|} StructType;   |
+\end{center}
+where \verb|StructType| is the (new) type for the struct,
+\verb|member|$_{\texttt{i}}$ are the (lowercase) names of its members, and
+\verb|Type|$_{\texttt{i}}$ are the (uppercase) types of its members.
+
+Structs can be parametric; see \autoref{sec:parametrics} for details.
+
+\paragraph{Creation:} The struct creation expression (\autoref{sec:structExpr}) allows constructing a struct value.
+Its syntax is:
+\begin{center}
+  \verb|StructType { member1 : expr1, ..., memberN : exprN }|
+\end{center}
+where \verb|StructType| is the struct's type name, \verb|member|$_{\verb|i|}$ are the struct members' names,
+and \verb|expr|$_{\verb|i|}$ denote the values that the members should take.
+
+\paragraph{Member access:} Given value \verb|s| of a struct type that has a member with name \verb|m|,
+the expression \verb|s.m| yields the value of member \verb|m|.
+If \verb|s| is a variable, then values can be assigned to its individual members as shown in the example.
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-3.5em}
+\begin{mscode}
+// Enum definition
+typedef enum {
+  Ready, Busy, Error
+} State;
+
+// Usage example, assume
+// that mod is a module
+State s = mod.getState();
+if (state == Ready)
+  // Feed mod an input
+else if (state == Error)
+  // Halt system
+
+// Enum def with label values
+typedef enum {
+ Red = 0, Blue = 2, Green = 1
+} PixelChannel;
+\end{mscode}
+\vspace{-5em}
+\end{wrapfigure}
+
+\subsection{Enums}
+\label{sec:enums}
+
+Enums or enumerations represent a set of unique symbolic constants, called \emph{labels}.
+Enums can defined using the following basic syntax:
+\begin{center}
+  \verb|typedef enum { Label1, ..., LabelN } EnumType;|
+\end{center}
+where \verb|EnumType| is the enum's type name, and \verb|Label|$_{\verb|i|}$ are the names of the labels.
+Labels must be uppercase, and can be repeated across enum definitions.
+A value of type \verb|EnumType| can take one of these labels.
+
+The compiler internally represents an enum with $N$ possible labels as a $\lceil log_2N \rceil$-bit value.
+With the syntax above, \verb|Label|$_{\verb|i|}$ will take numeric value \verb|i-1| (i.e., labels take consecutive values starting from \verb|0|).
+It is possible to assign the numeric value of each label explicitly using the following syntax:
+\begin{center}
+  \verb|typedef enum { Label1 = val1, ..., LabelN = valN } EnumType;|
+\end{center}
+where \verb|val|$_{\verb|i|}$ are the distinct numeric values of the labels.

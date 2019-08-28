@@ -1,0 +1,310 @@
+\section{Expressions}
+\label{sec:expressions}
+
+\emph{Expressions} are a combination of variables, literals, operators, and function calls that are \emph{evaluated} to produce a value.
+Expressions appear in the right-hand side of assignments, as arguments to function calls, and generally anywhere a value is needed.
+
+This section describes the different types of expressions and their syntax, but \emph{does not detail the semantics of most expression types}.
+For example, the operators subsection below explains the syntax and precedence of operators, but does not detail what each one \emph{does}.
+This is because these semantics are type-specific, so they are better explained later (e.g., in \autoref{sec:builtin} for operators).
+
+\paragraph{Simple and complex expressions:}
+Expressions may be as simple as a single variable or literal, may involve a single operator or function call (e.g., \texttt{a \&\& b} or \texttt{foo(x)}),
+or may consist of multiple nested \emph{subexpressions} (e.g., \texttt{foo(a \&\& b) || c}).
+
+\paragraph{Parentheses, precedence, and associativity:}
+Complex expressions with multiple operators can use parentheses to explicitly specify the evaluation order of the multiple operations
+(e.g., \texttt{(a + b) * c} or \texttt{a + (b * c)}).
+
+When parentheses are not used, evaluation order is determined using the \emph{precedence} and \emph{associativity} rules of the different operators.
+Each operator has a precedence, and higher-precedence operators are evaluated first.
+For example, \texttt{a + b * c} is equivalent to \texttt{a + (b * c)} because \texttt{*} has higher precedence than \texttt{+}.
+
+Among operators with the same precedence, associativity determines evaluation order.
+Almost all operators are \emph{left-associative}, so the expression is evaluated left-to-right.
+For example, \verb|x << 4 << 2| is equivalent to \verb|(x << 4) << 2| (i.e., \verb|x << 6|),
+and \emph{not} \verb|x << (4 << 2)| (which would be \verb|x << 16|).
+The only right-associative operator in Minispec is the ternary operator (\autoref{sec:expressions:ternary}).
+
+Though these rules match those of most programming languages and should feel natural,
+we recommend using parentheses when the evaluation order is not immediately obvious.
+
+\paragraph{No side effects:} Expressions in Minispec \emph{never} have side effects,
+i.e., evaluating an expression never modifies any variable or register.
+This means that independent subexpressions in a complex expression can be evaluated in any order (or in parallel).
+For example, in \texttt{foo(a \&\& b) || foo(b)}, both calls to \texttt{foo}
+can be evaluated in any order (function calls have no side effects).
+
+% TODO: Tool box
+\paragraph{Evaluating standalone expressions:} The Minispec tools let you type and evaluate standalone expressions.
+Use \texttt{ms eval} from the command line (e.g., \verb|ms eval File.ms "a + b"|)
+or the \texttt{\%\%eval} magic from Jupyter (e.g., \texttt{\%\%eval a + b}).
+
+% dsm: No, defer to static elab, this is much more about semantics
+%\paragraph{Compile-time vs.\ run-time evaluation:}
+
+\subsection{Unary and binary operators}
+
+% dsm: Eh, I think this is going to be way too redundant with the more natural type-centric descriptions and examples in the built-in types section. Skip.
+\begin{comment}
+\begin{tabular}{cc|c}
+\multicolumn{2}{c|}{\textbf{Boolean operators}} & \textbf{Examples} \\
+%\multicolumn{2}{c}{Apply to \verb|Bool|} & x\verb|Bool x = True; Bool y = False;| \\
+\multicolumn{2}{c|}{\multirow{2}{*}{Apply to \texttt{Bool}}} & \verb|Bool x = True;| \\
+\multicolumn{2}{c|}{}                                        & \verb| Bool y = False;| \\
+\hline
+\verb|!| & Boolean NOT  & \verb|    !x = False| \\
+\verb|&&| & Boolean AND & \verb|x && y = False| \\
+\texttt{||} & Boolean OR & \texttt{x || y = True } \\
+\end{tabular}
+
+\begin{tabular}{cc|c}
+\multicolumn{2}{c|}{\textbf{Equality operators}} & \textbf{Examples} \\
+\multicolumn{2}{c|}{\multirow{2}{*}{Apply to all types}} & \verb|Bit#(2) x = 2'b11;| \\
+\multicolumn{2}{c|}{}                                    & \verb|Bit#(2) y = 2'b10;| \\
+\hline
+\verb|==| & Equal     & \verb|x == y = False| \\
+\verb|!=| & Not equal & \verb|x != y = True | \\
+\end{tabular}
+
+\begin{tabular}{cc|c}
+\multicolumn{2}{c|}{\textbf{Comparison operators}} & \textbf{Examples} \\
+\multicolumn{2}{c|}{Apply to \texttt{Bit\#(n)},} & \verb|Bit#(2) x = 2'b11;| \\
+\multicolumn{2}{c|}{ \texttt{Integer}}           & \verb|Bit#(2) y = 2'b10;| \\
+\hline
+\verb|>|  & Greater          & \verb|x == y = False| \\
+\verb|>=| & Greater-or-equal & \verb|x != y = True | \\
+\end{tabular}
+\end{comment}
+
+% dsm: Initial version of operators; too long!
+\begin{comment}
+\begin{minipage}[t]{0.5\columnwidth}
+\centering
+\begin{tabular}{cccc}
+  \toprule
+  \multicolumn{4}{c}{\textbf{Unary operators}} \\
+  \textbf{Type}    & \textbf{Applies to} & \textbf{Operators} & \textbf{Names} \\
+  \midrule
+  \textbf{Boolean} & \verb|Bool| & \verb|!| & Boolean NOT \\
+  \midrule
+  \textbf{Logical} & \verb|Bit#(n)|, \verb|Integer| & \verb|!| & Bitwise invert \\
+  \midrule
+  \textbf{Arithmetic} & \verb|Bit#(n)|, \verb|Integer| & \verb|~| &  \\
+  \midrule
+  \textbf{Reduction} & \verb|Bit#(n)|, \verb|Integer| & \verb|&|, \textbf{|}, \verb|^| & AND/OR/XOR bit reduction \\
+  \bottomrule
+\end{tabular}
+\end{minipage}
+\hfill
+\begin{minipage}[b]{0.5\columnwidth}
+  \centering
+\begin{tabular}{cccc}
+  \toprule
+  \multicolumn{4}{c}{\textbf{Binary operators in precedence order}} \\
+  \textbf{Type}    & \textbf{Applies to} & \textbf{Operators} & \textbf{Names} \\
+  \midrule
+  \multirow{4}{*}{\textbf{Arithmetic}} & \verb|Bit#(n)|, \verb|Integer| & \verb|**| & Exponentiation \\
+  & & \verb|*|, \verb|/|, \verb|%| & Multiplication, division, modulus \\
+  & & \verb|+|, \verb|-| & Addition, subtraction \\
+  & & \verb|<<|, \verb|>>| & Left shift, right shift \\
+  \textbf{Relational} & \verb|Bit#(n)|, \verb|Integer| & \verb|<|, \verb|>|,\verb|<=|, \verb|>=| & Less/greater-than, less/greater-or-equal \\
+  \midrule
+  \textbf{Equality} & all types &  \verb|==|, \verb|!=| & Equality, inequality \\
+  \midrule
+  \multirow{4}{*}{\textbf{Logical}} && \verb|&| & Bitwise AND \\
+  && \verb|^| & Bitwise XOR \\
+  && \verb|^~|, \verb|~^| & Bitwise XNOR \\
+  && \texttt{|} & Bitwise OR \\
+  \midrule
+  \multirow{2}{*}{\textbf{Boolean}} && \verb|&&| & Boolean AND \\
+  && \texttt{||} & Boolean OR \\
+  \bottomrule
+\end{tabular}
+\end{minipage}
+\end{comment}
+
+\begin{minipage}[t]{0.45\columnwidth}
+
+\vspace{-1.4in}
+The tables below and to the right detail Minispec's unary and binary operators, respectively.
+Unary operators always have higher precedence than binary operators
+(so, for example, \verb|!a && b| is equivalent to \verb|(!a) && b|).
+Binary operators are shown in descending precedence order.
+Operators in the same row have the same precedence.
+All binary operators are left-associative.
+\\
+
+\vspace{8.3pt}
+
+\centering
+\begin{tabular}{ccc}
+  \toprule
+  \multicolumn{3}{c}{\textbf{Unary operators}} \\
+  \textbf{Type}    & \textbf{Operators} & \textbf{Names} \\
+  \midrule
+  \textbf{Boolean} & \verb|!| & Boolean NOT \\
+  \midrule
+  \textbf{Logical} & \verb|~| & Bitwise invert \\
+  \midrule
+  \textbf{Arithmetic} & \verb|+|, \verb|-| & Unary plus, negation \\
+  \midrule
+  \textbf{Reduction} & \verb|&|, \textbf{|}, \verb|^| & AND/OR/XOR bit reduction \\
+  \bottomrule
+\end{tabular}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.5\columnwidth}
+  \centering
+\begin{tabular}{ccc}
+  \toprule
+  \multicolumn{3}{c}{\textbf{Binary operators in precedence order}} \\
+  \textbf{Type}    & \textbf{Operators} & \textbf{Names} \\
+  \midrule
+  \multirow{4}{*}{\textbf{Arithmetic}} & \verb|**| & Exponentiation \\
+  & \verb|*|, \verb|/|, \verb|%| & Multiplication, division, modulus \\
+  & \verb|+|, \verb|-| & Addition, subtraction \\
+  & \verb|<<|, \verb|>>| & Left shift, right shift \\
+  \midrule
+  \textbf{Relational} & \verb|<|, \verb|>|,\verb|<=|, \verb|>=| & Less/greater-than/or-equal \\
+  \midrule
+  \textbf{Equality} & \verb|==|, \verb|!=| & Equality, inequality \\
+  \midrule
+  \multirow{4}{*}{\textbf{Logical}} & \verb|&| & Bitwise AND \\
+  & \verb|^| & Bitwise XOR \\
+  & \verb|^~|, \verb|~^| & Bitwise XNOR \\
+  & \texttt{|} & Bitwise OR \\
+  \midrule
+  \multirow{2}{*}{\textbf{Boolean}} & \verb|&&| & Boolean AND \\
+  & \texttt{||} & Boolean OR \\
+  \bottomrule
+\end{tabular}
+\end{minipage}
+
+\smallskip
+
+Most operators admit operands of particular types. Specifically:
+\begin{compactitem}
+\item Boolean operators apply only to values of type \texttt{Bool}.
+\item Arithmetic, relational, bitwise logical, and bit reduction operators
+  apply only to values of types \texttt{Bit\#(n)} or \texttt{Integer}.
+\item Equality operators apply to values of any type, including user-defined types.
+\end{compactitem}
+
+\subsection{Conditional expressions}
+\label{sec:condExprs}
+
+Conditional expressions allow selecting between two or more values depending on another value.
+
+\paragraph{Conditional operator:} The conditional or ternary operator selects between two values based on a Boolean value.
+Its syntax is: 
+\begin{center}
+\verb|condExpr? trueExpr : falseExpr|
+\end{center}
+where \verb|cond| is a \verb|Bool| expression, and \verb|trueExpr| and \verb|falseExpr| are expressions of the same type.
+If \verb|cond| is \verb|True|, the expression evaluates to \verb|trueExpr|; otherwise, it evaluates to \verb|falseExpr|.
+
+\emph{The conditional operator is right-associative} (in fact, it is the only right-associative operator).
+Therefore, \verb|a? x : b? y : z| is equivalent to
+\verb|a? x : (b? y : z)|, and \emph{not} \verb|(a? x : b)? y : z|.
+
+The conditional operator has the lowest precedence of all other operators.
+Therefore, \verb|a? x : y + z| is equivalent to \verb|a? x : (y + z)|,
+and \emph{not} \verb|(a? x : y) + z|.
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-2em}
+\begin{mscode}
+Bit#(2) v = 2'b10;
+
+Bool isOdd = case (v)
+  2'b01 : True;
+  2'b11 : True;
+  default : False;
+endcase
+
+// Can omit default if we
+// list all possibilities
+Bit#(2) plusOne = case (v)
+  0 : 1;
+  1 : 2;
+  2 : 3;
+  3 : 0;
+endcase
+\end{mscode}
+\vspace{-2em}
+\end{wrapfigure}
+
+\paragraph{Case expression:} The case expression allows selecting among multiple values depending on a value. Its syntax is:
+\begin{center}
+\verb|case (compExpr)           | \\
+\verb|  value1 : expr1;         | \\
+\verb|  value2 : expr2;         | \\
+\verb|        ...               | \\
+\verb|  | \tmp{$[$} \verb|default : defaultExpr;  |\tmp{$]$} \\
+\verb|endcase                   |
+\end{center}
+where \verb|compExpr|, \verb|expr|$_{\verb|i|}$, and \verb|defaultExpr| are expressions,
+and \verb|value|$_{\verb|i|}$ are different values of the same type as \verb|compExpr|.
+If \verb|compExpr|'s value matches one of the values \verb|value|$_{\verb|i|}$,
+the case expression evaluates to its corresponding expression \verb|expr|$_{\verb|i|}$.
+Otherwise, the case expression evaluates to \verb|defaultExpr|.
+
+The case expression must match against something---it must always evaluate to a value.
+Therefore, the \verb|default| item is optional only when the case expression enumerates
+all possible values of \verb|compExpr|.
+A case expression that does not enumerate all possible values and does not have a default
+item will produce a compiler error.
+
+%\todo{IIRC there was some Bluespec oddity regarding parentheses on case expressions, maybe due to pattern matching. If that's the case, GO FIX IT IN THE COMPILER.}
+%
+%\todo{Remove blockExpr from Minispec syntax, turn blockExpr into blockStmt; ditto for returnExpr, make it a Stmt; and nix the ``expression ;'' statement.}
+%
+%\tmp{Subsections below still TODO, are the same as Bluespec. Might want to merge all type-specific expressions under the same heading. Also, add examples to case statements.}
+
+\subsection{Selection and concatenation expressions}
+
+Selection expressions use brackets (\verb|[]|) to select a bit or range of bits from a \verb|Bit#(n)| value,
+or an element from a \verb|Vector#(n,T)|.
+Their syntax is \verb|expr[ startExpr|\tmp{$[$}\verb|:endExpr|\tmp{$]$}\verb|]|.
+\autoref{sec:bit} describes the semantics of selection expressions for \verb|Bit#(n)|,
+and \autoref{sec:vector} describes the semantics for \verb|Vector#(n,T)|.
+
+Concatentaion expressions use curly braces (\verb|{}|) to concatenate multiple \verb|Bit#(n)| values into a wider value.
+Their syntax is \verb|{expr1, ..., exprN}|.
+\autoref{sec:bit} describes their semantics.
+
+\subsection{Struct creation expressions}
+\label{sec:structExpr}
+
+%Structs are described in detail in \autoref{sec:structs}.
+The struct creation expression creates a struct value. Its syntax is
+%\begin{center}
+%\verb|StructType{member1 : expr1, ..., memberN : exprN}|.
+%\end{center}
+\texttt{StructType\{member1\,:\,expr1, ..., memberN\,:\,exprN\}}.
+%where \verb|StructType| is the struct's type name, \verb|member|$_{\verb|i|}$ are the struct members' names,
+%and \verb|expr|$_{\verb|i|}$ denote the values that the members should take.
+%See \autoref{sec:structs} for semantics and examples.
+\autoref{sec:structs} describes structs and the semantics of struct creation.
+
+\subsection{Function and method calls}
+\label{sec:calls}
+
+Functions are described \autoref{sec:functions}. The function call expression allows invoking a function. Its syntax is:
+\begin{center}
+  \verb|funcName|\tmp{$[$}\verb|#(param1, ..., paramK)|\tmp{$]$}\tmp{$[$}\verb|(argExpr1, ..., argExprN)|\tmp{$]$}
+\end{center}
+where \verb|funcName| is the name of the function, \verb|param|$_{\verb|i|}$ are the function's parameters,
+and \verb|argExpr|$_{\verb|i|}$ are the function's arguments.
+Parameters must be specified if the function is parametric (\autoref{sec:parametrics}), and can't be specified otherwise.
+Eanch parameter must be a type or an \verb|Integer| expression.
+Arguments are optional because it's possible to have functions without arguments. 
+
+Methods allow modules to return values, and are described in \autoref{sec:methods}. The method call expression has the following syntax:
+\begin{center}
+    \verb|submoduleName.methodName|\tmp{$[$}\verb|(argExpr1, ..., argExprN)|\tmp{$]$}
+\end{center}
+where \verb|submoduleName| is the name of the submodule instance that implements the method,
+\verb|methodName| is the name of the method, and \verb|argExpr|$_{\verb|i|}$ are the method's arguments.
+Methods cannot be parametric.

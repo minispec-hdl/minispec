@@ -1,0 +1,43 @@
+\section{Introduction}
+\label{sec:intro}
+
+This document is the primary reference for the Minispec hardware description language.
+It describes the syntax and semantics of the language in detail, and illustrates their use.
+
+\emph{This reference is not intended as an introduction to Minispec}, and assumes familiarity with the language.
+We recommend the \href{TODO}{Minispec tutorials} as an introduction to the language.
+
+\paragraph{How to use this reference:}
+This reference does not assume you will be reading it sequentially.
+Use it to answer specific questions or to improve your knowledge of particular aspects of Minispec.
+
+Each section presents a particular aspect of the language, with sections roughly laid out bottom-up:
+the first sections present the basic elements of the language (tokens, types, expression, etc.),
+while the latter sections present the more complex elements (functions, modules, etc.), which build on the simpler ones.
+Each section presents code examples delimited in \colorbox{codebg}{grey insets}.
+
+% dsm: Eh, whatever, this is pretty standard...
+%Each section seeks to be self-contained, so there is some overlap across sections.
+%For example, the expressions section (\autoref{sec:expressions}) discusses operators,
+%while the built-in types section (\autoref{sec:builtins})
+%presents the use of each operator in more detail.
+%Cross-references are used to avoid redundancy.
+
+\paragraph{Acknowledgements:}
+Minispec is very closely related to Bluespec SystemVerilog (BSV): it shares much of its syntax with BSV
+and the Minispec compiler internally translates Minispec to BSV.
+Minispec simply would not exist without BSV.
+%Nonetheless, Minispec seeks to hide the more advanced aspects of BSV.
+Nonetheless, using Minispec requires no knowledge of BSV, and so
+this reference is \emph{self-contained}: it presents Minispec on its own, without any further reference to BSV.
+\href{TODO}{Minispec from BSV} recounts the differences between both languages.
+
+In writing this reference, we took inspiration from the excellent language references
+of \href{TODO}{BSV}, \href{TODO}{Rust}, and \href{TODO}{Python}.
+
+%\paragraph{Notation:}
+%In addition to informal descriptions, this reference uses ANTLR's extended Backus-Naur Form (EBNF)
+%to precisely specify the Minispec syntax.
+%Grammar alternatives are separated by a vertical bar (``\texttt{|}'').
+%Items followed by a question mark (``?'') are optional.
+%Items followed by an asterisk (``*'') can be repeated zero or more times.

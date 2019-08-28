@@ -1,0 +1,243 @@
+\section{Statements}
+\label{sec:statements}
+
+Statements, such as variable declarations or assignments, are the basic syntax unit of Minispec logic.
+For example, each function (\autoref{sec:functions}) consists of a sequence of statements separated by semicolons.
+Each statement expresses an action to be carried out.
+Whereas expressions \emph{always} evaluate to a value and \emph{never} have side effects,
+statements \emph{never} evaluate to a value and \emph{often} have side effects.
+Semantically, statements appear to be evaluated in sequence, which makes code easy to understand.
+% TODO: Not sure this is clear, but it's important. There's an option to pull synthesis details to this section, but I'd avoid it...
+However, sequences of statements are synthesized into parallel combinational logic.
+\autoref{sec:combinational} explains how this synthesis is done.
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-3.5em}
+\begin{mscode}
+// Variable declarations
+//  Without initialization
+Bit#(1) a;
+//  With initialization
+Bit#(2) b = 2'b11;
+//  Using let
+let c = 3'b011; // Bit#(3)
+//  Multiple variables
+Bool d = True, e = False;
+
+// Assignments
+a = 1'b1;
+b[1] = 1'b0;
+c[2:1] = b + 1;
+typedef struct {
+  Bool m; Bit#(2) n;
+} ExStruct;
+ExStruct s;
+s.n[1] = 0;
+
+// Lexical scoping
+if (d) begin
+  let x = !e;
+  $display(x); // in scope
+end
+$display(x);
+// Error, x out of scope
+
+// Shadowing
+if (d) begin
+   let d = !e; // shadows
+   $display(d);
+end
+$display(d); // OK, uses
+             // outer d
+\end{mscode}
+\vspace{-9.5em}
+\end{wrapfigure}
+
+\subsection{Variable statements}
+\label{sec:varStmts}
+
+Variables are names for intermediate values.
+
+\paragraph{Variable declaration and initialization:} The basic variable declaration statement has the form:
+\begin{center}
+\verb|VarType varName;|
+\end{center}
+where \verb|VarType| is the variable's type and \verb|varName| is its name.
+Variables declared this way are \emph{uninitialized}, and cannot be used until they are assigned a value.
+
+Variables can be declared and initialized in the same statement:
+\begin{center}
+\verb|VarType varName = initExpr;|
+\end{center}
+where, \verb|initExpr| is an expression compatible with type \verb|VarType|.
+
+When declaring and initializing a variable, the \verb|let| keyword can be used in place of \verb|VarType|:
+\begin{center}
+\verb|let varName = initExpr;|
+\end{center}
+In this case, the compiler will infer the variable's type from \verb|initialExpr|'s type.
+
+Finally, multiple variables of the same type can be declared and optionally initialized in the same statement:
+\begin{center}
+\verb|VarType varName1 = initlExpr1, ..., varNameN = initlExprN;|
+\end{center}
+
+\paragraph{Variable assignment:} Each assignment statement binds a variable to a value. Its syntax is %:
+%\begin{center}
+\verb|lValue = expr;|,
+%\end{center}
+where \verb|lValue| can be \emph{(i)} variable name,
+\emph{(ii)} a struct member or submodule input (e.g., \verb|structVarName.memberName|),
+\emph{(iii)} a single bit or vector element (e.g., \verb|varName[bitNum]|),
+\emph{(iv)} a range of a bits from a \verb|Bit#(n)| variable (e.g., \verb|varName[hi:lo]|),
+or \emph{(v)} a nested combination of any of the above.
+
+A variable can be assigned to multiple times. Each assignment changes the value bound to the variable.
+Every statement following the assignment sees the new value.
+
+Variables of compound types (i.e., structs, vectors, and \verb|Bit#(n)|)
+can be declared uninitialized and then initialized element by element.
+However, it is illegal to use a \verb|Bit#(n)| variable that is partially initialized,
+even if the particular bits being accessed have been initialized.
+To avoid this problem, you can initialize the entire \verb|Bit#(n)| variable
+(e.g., to \verb|0| or \verb|?|), then reassign the individual bits.
+Structs and vectors do not suffer from this limitation.
+
+\paragraph{Variables are lexically scoped:}
+Like most languages, Minispec uses \emph{lexical scoping}: a variable may only be used inside the block of code it is defined.
+For example, a variable declared within a begin-end block cannot be used outside the block.
+
+\paragraph{Name clashes and variable shadowing:}
+It is illegal to declare two or more variables with the same name in the same scope (i.e., block of code).
+Scopes can be nested, and it is allowed, \emph{though not recommended},
+to declare a variable in a nested scope with the same name as another variable in a surrounding scope.
+In this case, we say the variable in the inner scope \emph{shadows} (i.e., hides) the variable in the outer scope.
+Shadowing can be confusing and error-prone, so the compiler emits warnings on every shadowed variable.
+
+\subsection{Begin-end statements}
+
+A begin-end statement denotes a block of code. It allows combining multiple statements into a single statement.
+Begin-end blocks can be used anywhere a statement is required, and are often used with control-flow
+statements \verb|if| and \verb|for|. Its syntax is:
+\begin{center}
+\verb|begin stmt1 ... stmtN end|
+\end{center}
+where \verb|stmt|$_{\texttt{i}}$ are statements. Each begin-end block initiates a new lexical context,
+which supports local variable declarations.
+
+Note that \emph{begin-end statements are not terminated by semicolons},
+and placing a \verb|;| after the \verb|end| keyword will cause an error.
+This follows BSV and SystemVerilog/Verilog syntax.
+In general, keywords that start with \verb|end| (e.g., \verb|end|, \verb|endfunction|, \verb|endcase|, etc.)
+are not followed by \verb|;|, while all other statements are terminated by \verb|;|.
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-4.5em}
+\begin{mscode}
+Bit#(2) a = 2'd2;
+Bool b = True;
+
+// If statements
+Bit#(8) x = 0;
+if (a > 2) x = {0, a};
+
+Bit#(4) y;
+if (b) y = x;
+else y = ~x;
+
+Bit#(2) z;
+if (a > 2) z = x;
+else if (b) z = y;
+else begin
+  let w = foo(y);
+  z = w + 1;
+end
+
+// Case statement
+case (z):
+  1 : x = 1;
+  2 : begin
+        x = 2;
+        z = y + 1;
+      end
+  default : x = 0;
+endcase
+
+// For loop
+Bit#(6) w;
+for (Integer i=0; i<6; i=i+1)
+  w[i] = x[i % 2];
+\end{mscode}
+\vspace{-7.5em}
+\end{wrapfigure}
+
+% dsm; Deferred
+%// Return statement
+%function Bit#(2) f(Bit#(4) a);
+%  return truncate(a + 3);
+%endfunction
+
+\subsection{Control-flow statements}
+
+Minispec supports conditional statements and (restricted) loops.
+Though similar in syntax to those of other programming languages,
+these constructs synthesize to combinational logic.
+Here we explain the syntax and semantics of each statement,
+and \autoref{sec:combinational} explains their synthesis to hardware.
+
+\paragraph{If statements} have the following syntax:
+\begin{center}
+\verb|if (condExpr) trueStmt |\optStart\verb| else falseStmt |\optEnd
+\end{center}
+where \verb|condExpr| is a \verb|Bool| expression, and \verb|trueStmt| and \verb|falseStmt| are statements.
+If \verb|condExpr| evaluates to \verb|True|, then \verb|trueStmt| is executed.
+Otherwise, if the optional else clause is present, \verb|falseStmt| is executed.
+
+As shown in the examples, if statements often use begin-end blocks, and
+multiple if-else statements can be chained (\verb|if (cond1) ... else if (cond2) ...|).
+
+\paragraph{Case statements} have a similar syntax to case \emph{expressions} (\autoref{sec:condExprs}):
+\begin{center}
+\verb|case (compExpr)           | \\
+\verb|  value1 : stmt1;         | \\
+\verb|  value2 : stmt2;         | \\
+\verb|        ...               | \\
+\verb| | \optStart \verb| default : defaultStmt; |\optEnd \\
+\verb|endcase                   |
+\end{center}
+A case statement tests \verb|compExpr| against the \verb|value|$_{\texttt{i}}$ values,
+and on a match with \verb|value|$_{\texttt{i}}$, \verb|stmt|$_{\texttt{i}}$ is executed.
+If there are no matches and the optional default label is specified, \verb|defaultStmt| is executed.
+Unlike case expressions, case statements need not enumerate all values or specify a default statement.
+If there are no matches and no default, none of the statements is executed.
+
+\paragraph{For loop statements} allow compactly expressing a sequence of similar statements. They have the usual syntax:
+\begin{center}
+\verb|for (Integer iVar = initExpr; testExpr; iVar = updExpr) stmt;|\
+\end{center}
+where \verb|iVar| is the name of the \verb|Integer| induction variable;
+\verb|initExpr| is the induction variable's initial value;
+\verb|testExpr| is a \verb|Bool| expression that denotes whether to stop iterations;
+\verb|updExpr| is evaluated after each iteration to update \verb|iVar|;
+and \verb|stmt| is the statement executed on each iteration.
+
+For loops are \emph{not} like general loops in programming languages.
+Whereas general loops may iterate on values unknown at compile time and may have an unknown number of iterations,
+Minispec for loops \emph{have a known iteration count} and \emph{are unrolled at compile time}.
+This makes for loops implementable with combinational logic.
+To guarantee that the iteration count is known, the induction variable is always an \verb|Integer|.
+For example, the loop in the example to the right is unrolled into:
+
+\begin{mscode}
+  w[0] = z[0];  w[1] = z[1];  w[2] = z[0];  w[3] = z[1];  w[4] = z[0];  w[5] = z[1];
+\end{mscode}
+
+\paragraph{Return statements} are used to return a value from a function or method. Their syntax is simply \verb|return expr;|.
+\autoref{sec:functions} explains where they can appear and provides further examples.
+
+\subsection{Register-write statements}
+
+A register-write statement performs a write to a register module.
+Its syntax is \verb|regName <= expr;|.
+Registers are the basic building block of modules and sequential logic,
+so \autoref{sec:modules} details the semantics and restrictions of register writes.

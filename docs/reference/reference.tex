@@ -1,0 +1,126 @@
+\documentclass[10pt]{article}
+
+\usepackage{times}
+
+\usepackage{xspace}
+\usepackage{hyphenat}
+\usepackage[normalem]{ulem}
+\usepackage[final]{microtype}
+\usepackage{parskip}
+
+% dsm: Tune tt series font; default (pcr) is poorly matched to regular text
+%\renewcommand{\ttdefault}{cmtt}
+\usepackage[scaled]{beramono}
+\usepackage[T1]{fontenc}
+%\renewcommand{\ttdefault}{beramono}
+
+\usepackage[top=1in,bottom=1in,left=0.75in, right=0.75in]{geometry}
+
+% Additional packages
+\usepackage{verbatim}   % allows multi-line comments
+\usepackage{array} % decent table formatting
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{caption} % \captionof, table captions on figure minipages
+\usepackage{subfig}
+\usepackage{wrapfig}
+\usepackage{tabularx}
+\usepackage{graphicx}
+
+% Sensible list margins with small margins
+\usepackage{paralist}
+\setlength{\leftmargini}{0.15in}
+
+% If you comment hyperref and then uncomment it, you should delete
+% aux files before re-running latex.
+\usepackage{color}
+\definecolor{lcolor}{RGB}{0, 56, 186} % {0, 35, 102}
+\definecolor{ucolor}{RGB}{20, 70, 150}
+\usepackage[bookmarks=false, breaklinks=true,letterpaper=true,colorlinks,linkcolor=lcolor,citecolor=lcolor,urlcolor=ucolor]{hyperref}
+\renewcommand\UrlFont{}
+
+% Hyperref fixes
+\renewcommand{\sectionautorefname}{Section}
+\renewcommand{\subsectionautorefname}{Section}
+\renewcommand{\subsubsectionautorefname}{Section}
+\newcommand{\subfigureautorefname}{Figure}
+\newcommand{\listingautorefname}{Listing}
+\newcommand*{\trailref}[2]{\hyperref[{#1}]{\autoref*{#1}#2}}
+
+% More compact spacing around sections
+\makeatletter
+\renewcommand\section{\@startsection {section}{1}{\z@}%
+                                   {-1ex \@plus -1ex \@minus -.2ex}%
+                                   {0.4ex \@plus.1ex}%
+                                   {\normalfont\Large\bfseries}}
+\renewcommand\subsection{\@startsection{subsection}{2}{\z@}%
+                                   {-0.5ex\@plus -0.5ex \@minus -.2ex}%
+                                   {0.2ex \@plus .1ex}%
+                                   {\normalfont\large\bfseries}}
+\makeatother
+
+% More compact paragraph defs
+\makeatletter
+\renewcommand{\paragraph}[1]{\noindent {\bf #1}}
+\renewcommand{\subparagraph}[1]{\noindent {\em #1}}
+\makeatother
+
+% Code higlighting and block macros
+% NOTE(dsm): This is minted 1.7, tried to upgrade to to 2.5 but the format looks messed up.
+% If you get format errors, use minted.sty v1.7
+\usepackage{minted}
+
+\definecolor{codebg}{rgb}{0.95,0.95,0.95}
+\newminted[mscode]{../../syntax/pygments/minispec.py:MinispecLexer -x}{bgcolor=codebg}
+%\newmintinline[ms]{../../syntax/pygments/minispec.py:MinispecLexer -x}{}
+
+\newcommand{\optStart}{\textcolor{red}{$[$}}
+\newcommand{\optEnd}{\textcolor{red}{$]$}}
+
+% Draft macros. Comment when dedrafting to make sure there are no changes left
+\newcommand{\note}[1]{{\bf [~NOTE:~#1~]}}
+\newcommand{\fixme}[1]{{\bf [~FIXME:~#1~]}}
+\newcommand{\todo}[1]{{\bf [~TODO:~#1~]}}
+\newcommand{\tmp}[1]{{\textcolor{red}{#1~}}}
+
+%Use this instead of a hyphen to allow the word to be hyphenated.
+\def\hyph{-\penalty0\hskip0pt\relax}
+% For example: software-controlled ==> software\hyph{}controlled
+
+%\setlength{\parskip}{1pt}
+
+\newcommand{\doctitle}{Minispec Reference Guide}
+
+\title{\vspace{-0.55in}{\textbf{\huge\doctitle}}\\
+{\large\emph{Version 0.2 (DRAFT), August 2019}}\vspace{-0.85in}}
+%\author{Daniel Sanchez}
+\date{}
+
+\hypersetup{pdftitle={\doctitle}}
+\hypersetup{pdfauthor={Daniel Sanchez}}
+
+\begin{document}
+
+%pdflatex needs some coaching...
+\setlength\paperheight {11in}
+\setlength\paperwidth  {8.5in}
+\special{papersize=8.5in,11in}
+\setlength{\pdfpageheight}{\paperheight}
+\setlength{\pdfpagewidth}{\paperwidth}
+
+\maketitle
+
+\input{1_intro.tex}
+\input{2_lexical.tex}
+\input{3_types.tex}
+\input{4_expressions.tex}
+\input{5_statements.tex}
+\input{6_builtin.tex}
+\input{7_userdefined.tex}
+\input{8_functions.tex}
+\input{9_modules.tex}
+\input{10_parametrics.tex}
+\input{11_design.tex}
+\input{12_tools.tex}
+
+\end{document}

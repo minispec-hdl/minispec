@@ -1,0 +1,396 @@
+\section{Modules and Sequential Logic}
+\label{sec:modules}
+
+Modules implement sequential logic, i.e., digital logic with \emph{state}.
+Specifically, they implement single-clock synchronous sequential circuits,
+where state is maintained in \emph{registers} that all share the same periodic clock signal.
+Registers update their contents simultaneously, at the rising edge of the clock.
+This allows discretizing time into \emph{cycles} and abstracting sequential circuits
+as \emph{finite state machines} (FSMs).
+As shown in \autoref{fig:fsm}, on each cycle, the FSM stores a particular \emph{state} (in registers)
+and takes some \emph{inputs}.
+Combinational logic within the FSM uses the state and inputs to compute the
+\emph{next state} of the FSM and its \emph{outputs} for the current cycle.
+At the end of the cycle (i.e., in the next rising clock edge),
+register update their values, placing the FSM into the next state.
+
+Minispec modules have four key elements that correspond to the components of FSMs:
+\begin{compactenum}
+\item \emph{Submodules}, which can be registers or other user-defined modules to allow composition of modules.
+\item \emph{Methods}, which implement combinational logic to produce \emph{outputs} given some inputs arguments and the current state.
+\item \emph{Rules}, which implement combinational logic to produce the \emph{next state} given some external \emph{inputs} and the current state.
+\item \emph{Inputs}, which represent external signals used by rules.
+\end{compactenum}
+
+\begin{figure}[h]
+\centering
+\begin{minipage}[b]{0.32\columnwidth}
+\centering
+\includegraphics[height=1.6in]{figures/ag_fsm.pdf}
+\caption{Finite State Machine.}
+\label{fig:fsm}
+\end{minipage}
+\hfill
+\begin{minipage}[b]{0.32\columnwidth}
+\centering
+\includegraphics[height=1.6in]{figures/ag_basicmodule.pdf}
+\caption{Basic module.}
+\label{fig:basicmodule}
+\end{minipage}
+\hfill
+\begin{minipage}[b]{0.32\columnwidth}
+\centering
+\includegraphics[height=1.6in]{figures/ag_hiermodule.pdf}
+\caption{General module.}
+\label{fig:hiermodule}
+\end{minipage}
+\end{figure}
+
+
+
+\autoref{fig:basicmodule} shows the structure of a basic module with registers but no other submodules.
+Comparing \autoref{fig:fsm} and \autoref{fig:basicmodule}, the key difference
+is the distinction between inputs and method arguments: whereas combinational logic in FSMs
+can use any input to produce both the next state and the output,
+module methods use \emph{arguments} to produce outputs, separate from the \emph{inputs} used by rules.
+As we will see, this separation \emph{makes hierarchical composition easy}:
+\autoref{fig:hiermodule} shows a general module that includes submodules other than registers.
+The separation between method arguments and rule inputs allows modules to instantiate and use
+arbitrary submodules \emph{while avoiding combinational cycles}, i.e., ensuring that combinational logic
+remains acyclic.
+
+Modules need not follow a strict hierarchy, but a hierarchical design has simpler semantics.
+Thus, we first focus on modules that follow a strict hierarchy (\autoref{sec:basicmodsemantics}). %and where each module has a single rule.
+We then describe the general semantics and additional mechanisms for modules that do not follow a strict hierarchy (\autoref{sec:generalmodsemantics}).
+
+\subsection{Module syntax and elements}
+\label{sec:modulesyntax}
+\label{sec:submodules}
+
+Modules are defined using the following syntax:
+\begin{center}
+\verb|module ModType | \optStart \verb|(Type1 arg1, ..., TypeN argN)|\optEnd\verb|;    | \\
+\verb|  <submodule, method, input, rule, constant decls> | \\
+\verb|endmodule                                          |
+\end{center}
+Each definition specifies a new module \emph{type}, \verb|ModType|,
+which can then be instantiated as a submodule in other modules
+or as the top-level module.
+Modules meant to be submodules can have optional \emph{module arguments},
+\verb|arg|$_{\texttt{i}}$, with types \verb|Type|$_{\texttt{i}}$.
+These arguments can be constant values (e.g., used so set initial values),
+or other modules.
+The body of the module can have declare submodules, methods, inputs, rules, and constants,
+whose syntax is explained below and shown in the examples to the right.
+
+Modules can be parametric; see \autoref{sec:parametrics} for details.
+
+\paragraph{Submodule declarations} use the syntax:
+\begin{center}
+  \verb|SubmodType submodName| \optStart \verb|(arg1, ..., argN)|\optEnd\verb|;|
+\end{center}
+where \verb|SubmodType| is the type of the submodule being instantiated,
+\verb|submodName| is the name of this specific submodule instance,
+and \verb|arg|$_{\texttt{i}}$ are the (optional) arguments to the module.
+
+
+\paragraph{Methods} 
+are nearly identical to functions:
+they specify combinational logic that produces an output
+and \emph{have no side effects}.
+They can call methods in submodules or read register values,
+but they cannot set the inputs of submodules or write to any register
+(these are side effects, which only rules can have).
+
+Methods use a syntax nearly identical to functions:
+\begin{center}
+\verb|method RetType mname(Type1 arg1, ..., TypeN argN);| \\
+\verb|  stmt1                                           | \\
+\verb|   ...                                            | \\
+\verb|  stmtN                                           | \\
+\verb|endmethod                                         |
+\end{center}
+where \verb|mname| is the method's name;
+\verb|RetType| is the type of its return value;
+\verb|arg|$_{\texttt{i}}$ are the names of its arguments,
+with types \verb|Type|$_{\texttt{i}}$;
+and \verb|stmt|$_{\texttt{i}}$ are statements.
+
+Methods also support the same shorthand syntax as functions:
+\begin{center}
+\verb|method RetType mname(Type1 arg1, ..., TypeN argN) = expr;|
+\end{center}
+
+%Methods \emph{may} read module inputs, but this is discouraged
+%as it may introduce a combinational cycle.
+%See \autoref{sec:advancedmodules} for details.
+
+\subparagraph{Use:}
+A method may be called from the methods or rules of its enclosing module.
+The syntax for a method call (\autoref{sec:calls}) is
+\verb|submoduleName.methodName(arg1, ..., argN)|.
+
+
+
+\paragraph{Inputs} specify external inputs that are controlled by
+the rule of an enclosing module. Their syntax is:
+\begin{center}
+\verb|input Type name |\optStart\verb|default = defaultExpr|\optEnd\verb|;|
+\end{center}
+where \verb|Type| is the input's name,
+\verb|name| is its name,
+and the optional \verb|defaultExpr| specifies a default value for the input.
+
+\subparagraph{Use:}
+Inputs can be read within the module just like normal variables, but cannot be set.
+
+Inputs can be set within a rule of the enclosing module,
+with syntax \verb|submoduleName.inputName = expr;|,
+like a normal assignment.
+If the input does not have a default value,
+the enclosing module \emph{must} set the input every cycle.
+If the input has a default value, then setting the input is optional.
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-2em}
+\begin{mscode}
+// 8-bit counter that can be
+// incremented every cycle
+module Counter;
+  Reg#(Bit#(8)) count(0);
+
+  method Bit#(8) getCount;
+    return count;
+  endmethod
+
+  input Bool increment
+    default = False;
+
+  rule tick;
+    if (increment)
+      count <= count + 1;
+  endrule
+endmodule
+\end{mscode}
+\vspace{-6em}
+\end{wrapfigure}
+
+An input can only be set \emph{once}. Trying to assign to the input multiple
+times within a cycle will cause a compiler error.
+
+
+\paragraph{Rules} specify combinational logic that updates the state of the module,
+i.e., they implement side-effects.
+Specifically, rules set the values to be written in registers
+at the end of the cycle and the inputs of submodules.
+
+Rules use the following syntax:
+\begin{center}
+  \verb|rule ruleName;| \\
+  \verb|  stmt1       | \\
+  \verb|   ...        | \\
+  \verb|  stmtN       | \\
+  \verb|endrule       |
+\end{center}
+
+\emph{Rules fire (i.e., automatically execute) every cycle}. A module may have multiple rules,
+but these rules cannot have overlapping side-effects
+(i.e., they must update disjoint registers and inputs).
+Any such overlap will cause a compiler error.
+
+% dsm: Let's keep this separate...
+%\paragraph{Differences with BSV:} 
+
+\subsection{Registers}
+\label{sec:registers}
+
+Registers are the most basic module.
+\verb|Reg#(T)| stores a value of type \verb|T|.
+\verb|T| can be any type that can be represented as bits.
+
+\paragraph{Declaration:}
+Modules can declare registers with the usual syntax for submodules.
+\verb|Reg#(T)| takes an initial value, so its declaration
+is \verb|Reg#(T) regName(initialValue);|.
+
+Initial values allow registers to start set to known values.
+This requires some additional circuitry (\autoref{sec:sequential}).
+If it's not necessary to have an initial value, this circuitry can be avoided by using
+\verb|RegU#(T)|, a variant of \verb|Reg#(T)| that starts on an unknown value.
+\verb|RegU#(T)| declarations do not take an initial value: \verb|RegU#(T) regName;|
+
+\paragraph{Reads:}
+Registers can be read from anywhere in the module.
+Simply using the name of the register yields its value.
+
+\paragraph{Writes:}
+Registers can be written from rules using the following syntax:
+\begin{center}
+\verb|regName <= expr;|
+\end{center}
+where \verb|regName| is the register's name and \verb|expr| is the value to be be written to it.
+Note how register writes are not normal assignments: they use \verb|<=| instead of \verb|=|
+and have different semantics.
+
+\emph{Register writes do not take place until the end of the cycle.}
+Reading a register value in the same rule and after a register write statement
+will yield the value of the register in the  \emph{current cycle},
+not the value set by the register write.
+
+\emph{Registers can be written only once.}
+In each cycle, a register may be written at most once.
+A rule that writes the same register multiple times will cause a compiler error.
+Two rules that may write to the same register will cause a compiler error.
+Registers need not be written every cycle; if not written, a register retains its previous value.
+
+% TODO(dsm): Vector#(Reg#()) ?
+
+\subsection{Semantics of hierarchically nested modules}
+\label{sec:basicmodsemantics}
+
+Suppose we impose two conditions on a design.
+First, modules follow a strict hierarchy,
+i.e., each module interacts only with the submodules it defines.
+Second, no method reads module inputs.
+
+Under these conditions, Minispec guarantees that there are no combinational cycles and gives very simple semantics:
+the system behaves as if, on each cycle, \emph{rules execute sequentially, outside-in}:
+first, the rule in the top-level module fires,
+then the rules in all its submodules, and so on.
+
+Because each module's rule calls methods in its submodules and sets the inputs to the submodules,
+this order guarantees that all inputs are set by the time a rule executes.
+%It also shows that, under these conditions, 
+Moreover, the effects of rules in submodules cannot be observed
+by their enclosing modules: data flows inside-out only through methods,
+and data flows outside-in through inputs and rules.
+
+\subsection{General semantics of modules (advanced)}
+\label{sec:generalmodsemantics}
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-4em}
+\begin{mscode}
+module FIFO;
+  input Bit#(4) enqueue;
+  method Bit#(4) first;
+    ...
+  endmethod
+  method Bool isFull;
+endmodule
+
+module Prod(FIFO outQ);
+  ...
+  rule produce;
+    if (!outQ.full)
+      outQ.enqueue = Valid(val);
+  endrule
+endmodule
+
+module Cons(FIFO inQ);
+  ...
+  rule consume;
+    let f = inQ.first;
+    if (isValid(f)) ...
+  endrule
+endmodule
+
+module TopLevel;
+  FIFO queue;
+  Prod producer(queue);
+  Cons consumer(queue);
+  ...
+endmodule
+\end{mscode}
+\vspace{-4em}
+\end{wrapfigure}
+
+
+
+Though the above semantics are simple, there are some cases for which strict hierarchical nesting can be too restrictive.
+For example, suppose we want to connect two modules through a FIFO (First-In-First-Out) queue:
+the producer module enqueues values into the queue, and the consumer module dequeues them.
+If we followed the hierarchical approach, the top-level module could instantiate three submodules,
+\texttt{producer}, \texttt{consumer}, and \texttt{queue}.
+Then, the rule in the top-level module could explicitly marshall outputs
+from \texttt{producer} into \texttt{queue} and from \texttt{queue} to \texttt{consumer}.
+But this can get cumbersome.
+Instead, we may want to have \texttt{producer} and \texttt{consumer} both directly
+interact with \texttt{queue}, \tmp{as shown in the code to the right}.
+But now \texttt{queue}'s methods and inputs are being used by two different modules,
+rather than only its enclosing module.
+Moreover, there may be non-trivial interactions between them.
+For example, if the producer has a value ready but the queue is empty,
+we might want to let the consumer dequeue that value on the same cycle.
+
+\paragraph{General semantics:}
+In general, rules in arbitrary modules can communicate in a single cycle, as long as
+doing so \emph{does not introduce a combinational cycle}.
+The compiler will find a fixed order for the rules, and will emit an error on any cycle.
+
+For instance, in our producer-consumer example, the FIFO queue module could have an
+\texttt{enqueue} input and a \texttt{first} method that returns that input if the queue has no buffered values.
+Because \texttt{consumer} calls \texttt{first}, \texttt{first} reads \texttt{enqueue}, and \texttt{producer}
+set \texttt{enqueue}, \texttt{producer}'s rule is ordered before \texttt{consumer}'s.
+If there was another constraint in the system that required the reverse order
+(e.g., a queue going in the reverse direction), that would signal a combinational cycle,
+which would cause a compiler error.
+
+\paragraph{Wires:}
+In general, it may be desirable to split computation across rules and methods
+within the same module to avoid combinational cycles and code repetition, or to enforce a particular order.
+Wires are modules that allow rules and methods to communicate in the same cycle.
+They come in two flavors:
+\begin{compactitem}
+\item \verb|BypassWire#(T)| implements a wire that must be written on every cycle. It cannot be read until a rule writes to it.
+\item \verb|DWire#(T)| implements a wire with a default value. If the wire is not written in a given cycle,
+  reads to the wire return the default value. The wire has no memory: the wire ``reverts'' to the default value every cycle.
+\end{compactitem}
+Wires have the same interface as registers: using the name of the register yields its value,
+assignments with \verb|<=| write to it, only rules may write to wires, and multiple writes are not allowed.
+
+Wires introduce order constraints among rules and methods:
+the rule that writes to the wire is ordered before all rules and methods that read the wire.
+
+\subsection{Sequential logic synthesis}
+\label{sec:sequential}
+
+Sequential synthesis is a straightforward extension of combinational synthesis (\autoref{sec:combinational}).
+
+Each sequential circuit has inputs and outputs as shown in \autoref{fig:hiermodule}.
+Two of these inputs are \emph{implicit} and not present in Minispec code:
+CLK, the \emph{clock signal}, and RST, the \emph{reset signal}.
+
+Registers are synthesized as collections of 1-bit D flip-flops (DFFs).
+All registers use CLK as their clock.
+Registers with an initial value (i.e., \verb|Reg#(T)|) include reset circuitry
+that sets its value to the initial value then the circuit powers up.
+Because flip-flops hold an arbitrary value when first powered, this is accomplished by
+the RST signal: the RST signal is 1 for a few cycles after power-up,
+letting registers write their initial values with the circuitry \tmp{shown right}.
+Registers with no initial value (i.e., \verb|RegU#(T)|) have no reset circuitry.
+
+Registers are always written to by a single rule, but may not be updated every cycle.
+When not updated every cycle, the register includes \emph{write-enable} circuitry
+to optionally retain its old value, as \emph{shown right}.
+
+Inputs without a default value are simply wires.
+Inputs with a default value translate to a multiplexer that chooses between
+the input value, if any is set, and the default value, if none is set, as shown right.
+
+Rules are synthesized as normal combinational logic.
+They produce the values for all registers and inputs they set.
+When rules conditionally set registers or inputs,
+they also generate the corresponding \emph{enable} signals
+so that, when not set, registers retain their old value
+and inputs use their default value.
+
+Methods are synthesized like functions.
+A method can be called multiple times. If the method has no arguments
+(i.e., it always returns the same value on a given cycle),
+all callers share the same output value. If the method has arguments,
+each call instantitates a new copy of the method.
+
+Finally, wires (\autoref{sec:generalmodsemantics})
+are synthesized exactly like inputs.
+

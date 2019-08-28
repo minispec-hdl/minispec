@@ -1,0 +1,3 @@
+{"argv":["python2","-m","minispeckernel", "-f", "{connection_file}"],
+ "display_name":"Minispec"
+}
