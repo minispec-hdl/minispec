@@ -1,0 +1,25 @@
+*.o
+*.ba
+*.bo
+*.pyc
+*.bak
+*.swp
+
+.sconsign.dblite
+antlr4.jar
+antlr4/
+build/
+.vagrant/
+
+minispec-combine
+msc
+
+# Documentation
+*.aux
+*.log
+*.bbl
+*.blg
+docs/reference/metadata.txt
+!docs/reference/figures/Makefile
+!docs/reference/figures/figures.*
+docs/reference/figures/*
