@@ -23,16 +23,12 @@ Vagrant.configure("2") do |config|
   # For jupyter notebooks
   config.vm.network "forwarded_port", guest: 8888, host: 8888
   
-  # For JupyterHub
-  config.vm.network "forwarded_port", guest: 80, host: 8080
-  config.vm.network "forwarded_port", guest: 443, host: 8443
- 
   config.vm.provision "shell", inline: <<-SHELL
     # Packages
     export DEBIAN_FRONTEND=noninteractive
     apt-get -y update
     # Basics, direct minispec deps (include bsc deps), antlr deps, antlr runtime build
-    apt-get -y install vim  scons git build-essential g++ gcc-8 g++-8 libxft2 libgmp  openjdk-8-jdk-headless  cmake pkg-config uuid-dev
+    apt-get -y install vim  scons git build-essential g++ gcc-8 g++-8 libxft2 libgmp10  openjdk-8-jdk-headless  cmake pkg-config uuid-dev
 
     # Make gcc-8 the default by using update-alternatives (see https://askubuntu.com/a/1028656)
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 700 --slave /usr/bin/g++ g++ /usr/bin/g++-7
@@ -74,35 +70,6 @@ Vagrant.configure("2") do |config|
     if [ ! -d ~vagrant/notebook-5.7.8 ]; then
       pip install --upgrade setuptools pip
       sudo -H -u vagrant /vagrant/jupyter/install-jupyter.sh
-    fi
-
-    # JupyterHub (NOTE: PROVISIONAL; NEEDS TESTING!)
-    if [ ! -d /opt/tljh ]; then
-      echo "Installing JupyterHub / TLJH"
-      # NOTE: SSL requires host iptables rules for port forwarding 443 -> 8443 and 80 -> 8080.
-      # For example, in host, run:
-      # sudo iptables -A PREROUTING -t nat -p tcp --dport 80 -j REDIRECT --to-ports 8080
-      # sudo iptables -A PREROUTING -t nat -p tcp --dport 443 -j REDIRECT --to-ports 8443
-      #
-      # NOTE: bootstrap.py is unversioned... relying on master being stable, if
-      # this breaks, run bootstrap manually from tlhj commit f952e4e
-      curl https://raw.githubusercontent.com/jupyterhub/the-littlest-jupyterhub/master/bootstrap/bootstrap.py | python3 - --admin dnl
-      # Enable HTTPS
-      tljh-config set https.enabled true
-      tljh-config set https.letsencrypt.email daniel+lejh@dsanchez.es
-      tljh-config add-item https.letsencrypt.domains brix.csail.mit.edu
-      tljh-config reload proxy
-      # Copy configs over (includes env vars + OIDC auth)
-      cp /vagrant/jupyter/jupyterhub_config.d/* /opt/tljh/config/jupyterhub_config.d/
-      tljh-config reload hub
-
-      # Install modified notebook (TODO: within jupyterhub... check this works right)
-      bash -c "source /opt/tljh/user/bin/activate && cd ~vagrant/notebook-5.7.8 && python -m pip install ."
-      bash -c "source /opt/tljh/user/bin/activate && jupyter kernelspec install --sys-prefix /vagrant/jupyter/kernel/minispec"
-      # For some reason jupyterhub doesn't catch the installed minispeckernel.py...
-      ln -s /usr/local/lib/python2.7/site-packages/minispeckernel.py /usr/local/lib/python2.7/
-
-      # NOTE: Set secrets in jupyter_config.d/auth.py
     fi
 
     # Finally, build minispec itself (note: in shared folder... might want to
