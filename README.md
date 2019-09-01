@@ -33,6 +33,11 @@ Foundation, version 2.
 Setup
 -----
 
+**Using a virtual machine (recommended):** Install `vagrant`, then run `vagrant
+up` from the minispec root folder in your host. This will provision an Ubuntu
+18.04 VM with all dependencies, and build the minispec compiler (`msc`). Then,
+run `vagrant ssh` to log into the VM.
+
 **Dependencies:**
 
 * Bluespec (`bsc`) version 2016.07.beta1 (build 34806, 2016-07-05).
@@ -56,9 +61,17 @@ Setup
 Getting started
 ---------------
 
-Currently, there is no documentation. `examples/` contains several examples
-showcasing different aspects of Minispec. If you know Bluespec, this should
-suffice to learn the language.
+The Minispec language reference, at `docs/reference`, is the primary reference
+for the Minispec HDL. It describes the syntax and semantics of the language in
+detail, and illustrates their use. To build the reference, run:
+```cd docs/reference
+make
+```
+The reference uses LaTeX, so you'll need a LaTeX distribution installed in your
+system (e.g., texlive).
+
+`examples/` contains several examples showcasing different aspects of Minispec.
+If you already know Bluespec, this should suffice to learn the language.
 
 `tests/` has compiler tests on non-working examples, meant to show error
 handling capabilities.
