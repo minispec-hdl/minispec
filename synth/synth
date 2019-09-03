@@ -216,12 +216,10 @@ if __name__ == "__main__":
         # Clean up all files, as multi-module builds sometimes get stale data otherwise
         run("rm -rf %s/*" % (args.synthdir,))
 
-    # Find BSV library path
-    bscBinary = run("which bsc").strip()
-    if not os.path.exists(bscBinary):
-        print "Bluespec compiler not found (should be in your $PATH)"
-        sys.exit(1)
-    bsvLibPath = os.path.join(os.path.dirname(os.path.dirname(bscBinary)), "lib/Verilog")
+    # Find BSV library path by asking bsc directly (so this works without $BLUESPECDIR and with symlinks)
+    bscArgs = run("bsc -print-flags", failMsg = "Bluespec compiler cannot run (is it in your $PATH?)")
+    bsvBaseLibPath = bscArgs.split("  -i ")[1].split("\n")[0].strip()
+    bsvLibPath = os.path.join(bsvBaseLibPath, "Verilog")
     if not os.path.exists(bsvLibPath):
         print "Found Bluespec compiler, but component library is not at %s. Do you have a non-standard Bluespec installation?" % (bsvLibPath,)
         sys.exit(1)
