@@ -12,13 +12,13 @@ class SourceMap {
         const std::map<Range, antlr4::tree::ParseTree*> dstToSrc;
         const std::map<Range, std::string> dstToInfo;
         const std::string code;
-        const std::string simModule;
+        const std::string topModule;
         std::vector<size_t> lineToPos;
 
         SourceMap(const std::map<Range, antlr4::tree::ParseTree*>& dstToSrc,
                   const std::map<Range, std::string>& dstToInfo,
-                  const std::string& code, const std::string& simModule) :
-            dstToSrc(dstToSrc), dstToInfo(dstToInfo), code(code), simModule(simModule)
+                  const std::string& code, const std::string& topModule) :
+            dstToSrc(dstToSrc), dstToInfo(dstToInfo), code(code), topModule(topModule)
         {
             lineToPos.push_back(0);
             for (size_t p = 0; p < code.size(); p++) {
@@ -74,7 +74,7 @@ class SourceMap {
         }
 
         const std::string& getCode() const { return code; }
-        const std::string& getSimModule() const { return simModule; }
+        const std::string& getTopModule() const { return topModule; }
 };
 
 SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*> parsedTrees, const std::string& topLevel);

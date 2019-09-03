@@ -1600,18 +1600,25 @@ SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*> p
 
     exitIfErrors();
   
-    std::string simModule = "";
-    if (topLevelParametric) simModule = "mk" + topLevelParametric->str();
-    // bsc -sim freaks out if the top-level module has an escaped name (the
-    // generated C++ files have the raw name all over). So produce a wrapper.
-    if (topLevelParametric && !topLevelParametric->params.empty() && isupper(topLevelParametric->name[0])) {
-        tc.emitLine("\n// Simulation wrapper module");
-        tc.emitLine("module mkSimWrapper___( \\", topLevelParametric->str(), " );");
-        tc.emitLine("  \\", topLevelParametric->str(), " res <- \\mk", topLevelParametric->str(), " ;");
+    std::string topModule = "";
+    if (topLevelParametric) topModule = "mk" + topLevelParametric->str();
+
+    // Top-level parametric modules with names containing #() break both bsc
+    // -sim (the generated C++ files have the unescaped raw name all over) and
+    // produce invalid Verilog output. So produce a wrapper module.
+    if (topLevelParametric && !topLevelParametric->params.empty()/* && isupper(topLevelParametric->name[0])*/) {
+        ParametricUse ifcPu = *topLevelParametric;
+        if (!isupper(ifcPu.name[0])) {
+            ifcPu.name[0] = toupper(ifcPu.name[0]);
+            ifcPu.name += "___";
+        }
+        tc.emitLine("\n// Top-level wrapper module");
+        tc.emitLine("module mkTopLevel___( \\", ifcPu.str(), " );");
+        tc.emitLine("  \\", ifcPu.str(), " res <- \\mk", topLevelParametric->str(), " ;");
         tc.emitLine("  return res;");
         tc.emitLine("endmodule");
-        simModule = "mkSimWrapper___";
+        topModule = "mkTopLevel___";
     }
 
-    return tc.getSourceMap(simModule);
+    return tc.getSourceMap(topModule);
 }

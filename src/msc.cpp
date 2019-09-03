@@ -359,13 +359,13 @@ int main(int argc, const char* argv[]) {
     if (simOut) {
         if (topLevel.size() && isupper(topLevel[0])) {
             std::stringstream cmd;
-            cmd << "(cd " << tmpDir << " && bsc " << bscOpts << " -sim -g '" << sm.getSimModule() << "' -u Translated.bsv) 2>&1 >/dev/null";
+            cmd << "(cd " << tmpDir << " && bsc " << bscOpts << " -sim -g '" << sm.getTopModule() << "' -u Translated.bsv) 2>&1 >/dev/null";
             runBscCmd(cmd.str());
             typechecked = true;
 
             // Link simulation executable
             cmd.str("");
-            cmd << "(cd " << tmpDir << " && bsc " << bscOpts << " -sim -e '" <<  sm.getSimModule() << "' -o '../" << outName << "') 2>&1 >/dev/null";
+            cmd << "(cd " << tmpDir << " && bsc " << bscOpts << " -sim -e '" <<  sm.getTopModule() << "' -o '../" << outName << "') 2>&1 >/dev/null";
             runBscCmd(cmd.str());
             std::cout << "produced simulation executable " << hlColored(outName) << "\n";
         } else if (!defaultOut) {
@@ -379,12 +379,12 @@ int main(int argc, const char* argv[]) {
     if (verilogOut) {
         if (topLevel.size()) {
             std::stringstream cmd;
-            cmd << "(cd " << tmpDir << " && bsc " << bscOpts << " -verilog -g 'mk" <<  topLevel << "' -u Translated.bsv) 2>&1 >/dev/null";
+            cmd << "(cd " << tmpDir << " && bsc " << bscOpts << " -verilog -g '" << sm.getTopModule() << "' -u Translated.bsv) 2>&1 >/dev/null";
             runBscCmd(cmd.str());
             typechecked = true;
 
             cmd.str("");
-            cmd << "cp '" << tmpDir << "/mk" << topLevel << ".v' '" << outName << ".v'";
+            cmd << "cp '" << tmpDir << "/" << sm.getTopModule() << ".v' '" << outName << ".v'";
             run(cmd.str());
             std::cout << "produced verilog output " << hlColored(outName + ".v") << "\n";
         } else if (!defaultOut) {
