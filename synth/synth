@@ -4,6 +4,8 @@
 # Massachusetts Institute of Technology
 import argparse, ctypes, json, os, re, string, subprocess, sys
 
+## BSV compilation helpers
+
 # Given multi-line input BSV, returns BSV without single or multi-line comments
 def stripComments(input):
     strippedMultiline = re.sub('\/\*(.*?)\*\/', '', input, flags = re.MULTILINE | re.DOTALL)
@@ -12,7 +14,7 @@ def stripComments(input):
 
 # Parse Bluespec function signature from string.
 # This is simple enough that I don't think we need a full-blown parser.
-def parseFuncStr(funcStr):
+def parseBsvFuncStr(funcStr):
     # Trim provisos and direct defs
     for breakStr in ["=", "proviso"]:
         loc = funcStr.find(breakStr)
@@ -55,11 +57,11 @@ def parseFuncStr(funcStr):
 
     return (retType, funcName, argList)
 
-def compileFunction(input, args):
+def compileBsvFunction(input, args):
     targetFunc = None
     for f in re.finditer(' function (.*?);', input):
         #print "Identified function", f.group(1)
-        func = parseFuncStr(f.group(1).strip())
+        func = parseBsvFuncStr(f.group(1).strip())
         if not func:
             continue
         if func[1] != args.target.strip():
@@ -95,7 +97,7 @@ def compileFunction(input, args):
     run("bsc -aggressive-conditions +RTS -K16M -RTS -bdir %s -info-dir %s -p examples/processor/:%%:+ -verilog -u -g mkSynth %s " % (args.synthdir, args.synthdir, wrapperFile))
     return targetFunc
 
-def compileModule(input, args):
+def compileBsvModule(input, args):
     # Compiling modules is easier because we do not produce a wrapper.
     # Instead, we just ensure that the module exists.
     modName = args.target.strip()
@@ -117,6 +119,9 @@ def compileModule(input, args):
     run("bsc -aggressive-conditions +RTS -K16M -RTS -bdir %s -info-dir %s -vdir %s -show-module-use -p examples/processor/:%%:+ -verilog -u -g %s %s" % (args.synthdir, args.synthdir, args.synthdir, modName, modFile),
             "Bluespec compilation failed. Make sure your module is functionally correct.")
     return True
+
+def sanitizeParametric(p):
+    return p.replace("#", "_").replace(",", "_").replace("(", "").replace(")", "").replace(" ", "").replace("\t", "")
 
 # Runs a command with fail-stop semantics, like make. If the program returns
 # successfully, run() returns stdout and stderr; on a failure, run() stops the
@@ -211,17 +216,6 @@ if __name__ == "__main__":
         # Clean up all files, as multi-module builds sometimes get stale data otherwise
         run("rm -rf %s/*" % (args.synthdir,))
 
-    # If this is Minispec, produce the bsv for it, then compile that (for now...)
-    if args.file.endswith(".ms"):
-        inputPath = os.path.abspath(args.file)
-        mscBin = os.path.join(os.path.dirname(scriptDir), "msc")
-        run("(cd %s && %s -o bsv %s Synth)" % (args.synthdir, mscBin, inputPath)) 
-        #run("(%s -o bsv %s Synth && mv Synth.bsv %s)" % (args.synthdir, mscBin, inputPath, args.synthdir))
-        args.file = os.path.join(args.synthdir, "Synth.bsv")
-
-    # Read early to bail out on a wrong input
-    input = readFile(args.file, "input file")
-
     # Find BSV library path
     bscBinary = run("which bsc").strip()
     if not os.path.exists(bscBinary):
@@ -241,21 +235,32 @@ if __name__ == "__main__":
     except:
         print "WARN: Could not prctl()"
 
-    # Use a single-line string to avoid dealing with multi-line regex/parsing.
-    # Leading space guarantees that all function defs start with a space, so we can
-    # use a simple regex on " function" instead of distinguishing function and
-    # endfunction. Same deal for module/endmodule.
-    input = " " + stripComments(input).replace("\n", " ")
-
     isModule = False
-    if compileModule(input, args):
-        isModule = True
+    if args.file.endswith(".ms"):
+        # Minispec: just use msc output
+        isModule = args.target[0].isupper()
+        print "Compiling %s %s from file %s" % ("module" if isModule else "function", args.target, args.file)
+        run("(cd %s && msc -o v %s '%s')" % (args.synthdir, os.path.abspath(args.file), args.target))
+        modName = "mk" + args.target.strip() if "#" not in args.target else "mkTopLevel___"
     else:
-        targetFunc = compileFunction(input, args)
-        if not targetFunc:
-            print "Target (function/module) %s not found in %s" % (args.target, args.file)
-            sys.exit(1)
-        (_, _, argList) = targetFunc
+        # Bluespec
+        input = readFile(args.file, "input file")
+
+        # Use a single-line string to avoid dealing with multi-line regex/parsing.
+        # Leading space guarantees that all function defs start with a space, so we can
+        # use a simple regex on " function" instead of distinguishing function and
+        # endfunction. Same deal for module/endmodule.
+        input = " " + stripComments(input).replace("\n", " ")
+
+        if compileBsvModule(input, args):
+            isModule = True
+        else:
+            targetFunc = compileBsvFunction(input, args)
+            if not targetFunc:
+                print "Target (function/module) %s not found in %s" % (args.target, args.file)
+                sys.exit(1)
+            (_, _, _) = targetFunc
+        modName = args.target.strip() if isModule else "mkSynth"
 
     stdcellFile = os.path.join(scriptDir, args.lib + ".lib")
     if not os.path.exists(stdcellFile):
@@ -328,7 +333,6 @@ if __name__ == "__main__":
     for mod in modpaths:
         readVerilogCmds.append("read_verilog " + modpaths[mod])
 
-    modName = args.target.strip() if isModule else "mkSynth"
     yosysTemplate = string.Template(readFile(os.path.join(scriptDir, "synth_seq.ys" if args.retime else "synth.ys")))
     yosysBaseData = yosysTemplate.safe_substitute(
         READVERILOGCMDS = "\n".join(readVerilogCmds),
@@ -732,15 +736,16 @@ if __name__ == "__main__":
         if not isModule:
             # Demangle inputs/outputs, remove all RDYs etc.
             newPorts = {}
-            for (argType, argName) in argList:
-                newPorts[argName] = data["modules"][modName]["ports"]["__" + argName]
+            for name in data["modules"][modName]["ports"]:
+                if name.startswith("__"):
+                    newPorts[name[2:]] = data["modules"][modName]["ports"][name]
             newPorts["out"] = data["modules"][modName]["ports"]["out"]
             data["modules"][modName]["ports"] = newPorts
         f = open(jsonFile, "w")
         json.dump(data, f)
         f.close()
 
-        diagramFile = args.target.strip() + ".svg"
+        diagramFile = sanitizeParametric(args.target) + ".svg"
         skinFile = os.path.join(scriptDir, "gates.svg")
         run("netlistsvg %s -o %s --skin %s" % (jsonFile, diagramFile, skinFile))
         print "\nProduced circuit diagram in %s" % (diagramFile,)
