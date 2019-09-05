@@ -67,7 +67,7 @@ enum       endmodule      endrule      endcase    else     bsvimport
 \end{mscode}
 
 In addition, because Minispec compiles to BSV and Verilog, the Minispec compiler currently forbids using keywords from these languages as identifiers.
-The compiler will produce an error is any of these keywords is used.
+The compiler will produce an error if any of these keywords is used.
 
 \subsection{Number literals}
 
@@ -130,7 +130,7 @@ Bit#(4) z = 10;     // OK, 10 inferred to be 4 bits
 Bit#(4) w = 1000;   // Error, decimal 1000 inferred to be 4 bits but doesn't fit in 4 bits
 \end{mscode}
 
-Unsized literals must be used in in expressions involving \verb|Integer| variables,
+Unsized literals must be used in expressions involving \verb|Integer| variables,
 as \verb|Integer| is an unsized, compile-time-only type (see \autoref{sec:integer}).
 
 \subsection{String literals}

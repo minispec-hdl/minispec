@@ -70,7 +70,7 @@ These operations treat \verb|Bit#(n)| values as \emph{unsigned integers}.
 Bit reductions are unary operations that take a \verb|Bit#(n)| input
 and return a \verb|Bit#(1)| output that results
 from reducing the bits of the input using the specified operation.
-For example, given \verb|Bit#(4) a|, \verb|&a| is eauivalent to \verb|a[3] & a[2] & a[1] & a[0]|.
+For example, given \verb|Bit#(4) a|, \verb|&a| is equivalent to \verb|a[3] & a[2] & a[1] & a[0]|.
 
 \paragraph{Converting to and from \texttt{Bit\#(n)}:}
 All types except \texttt{Integer} are ultimately represented as a collection of bits in hardware, and can be converted to and from \texttt{Bit\#(n)}.
@@ -81,7 +81,7 @@ and \verb|unpack| converts from \verb|Bit#(n)|, as shown below.
 typedef enum Color {Red, Green, Blue};
 Color c = Red;
 Bit#(2) x = pack(c);      // 2'b00, the binary representation of Red
-Color g = unpack(x + 1);  // Green, whose binary representation is 2'b00
+Color g = unpack(x + 1);  // Green, whose binary representation is 2'b01
 Color u = unpack(x + 3);  // unspecified value, as no Color corresponds to 2'b11
 \end{mscode}
 
@@ -99,8 +99,8 @@ This is consistent with how digits are always enumerated in a number (according 
 but is different from how vectors are indexed.
 
 The selector \verb|i| in \verb|x[i]| can be a literal, an \verb|Integer|, or a \verb|Bit#(k)| variable. In the first two cases the bit selected is constant,
-which results in an efficient hardware implementation (as no logic gates are required).
-In the last case the bit selected is variable, and will reuire more hardware to implement.
+which results in an efficient hardware implementation (as no logic gates are required, only wires).
+In the last case the bit selected is variable, and will require more hardware to implement.
 
 Given a \verb|Bit#(n)| variable \verb|x|,
 \verb|x[i:j]|, with \verb|i| $\geq$ \verb|j|, selects the range of bits of \verb|x|
@@ -161,13 +161,15 @@ Bit#(6) w = signExtend(x);
 \end{wrapfigure}
 
 \paragraph{Truncation and extension:}
-The built-in function \verb|truncate| truncates the most-significant bits of its argument to match the bit-width of a narrower destination. \verb|zeroExtend| adds zeros to the 
+The built-in function \verb|truncate| truncates the most-significant bits of its argument to match the bit-width of a narrower destination. \verb|zeroExtend| adds zeros to the left of the argument to match the bit-width of a wider destination.
+Finally, \verb|signExtend| extends the argument by replicating its most significant bit to match the bit-width of a wider destination.
 
 \subsection{Integer}
 \label{sec:integer}
 
 \verb|Integer| represents an integer value (i.e., a negative or non-negative number) with an unbounded number of bits.
-\verb|Integer| supports the same unary and binary operators as \verb|Bit#(n)|. However, since \verb|Integer| is signed,
+\verb|Integer| supports the same unary and binary
+operators as \verb|Bit#(n)|. However, since \verb|Integer| is signed,
 arithmetic and relational operators have signed semantics.
 
 \verb|Integer| is the only type in Minispec that is not synthesizable to hardware, and it is used exclusively at compile time:

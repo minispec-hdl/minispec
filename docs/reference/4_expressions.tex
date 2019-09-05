@@ -24,7 +24,7 @@ Among operators with the same precedence, associativity determines evaluation or
 Almost all operators are \emph{left-associative}, so the expression is evaluated left-to-right.
 For example, \verb|x << 4 << 2| is equivalent to \verb|(x << 4) << 2| (i.e., \verb|x << 6|),
 and \emph{not} \verb|x << (4 << 2)| (which would be \verb|x << 16|).
-The only right-associative operator in Minispec is the ternary operator (\autoref{sec:expressions:ternary}).
+The only right-associative operator is the ternary operator (\autoref{sec:condExprs}).
 
 Though these rules match those of most programming languages and should feel natural,
 we recommend using parentheses when the evaluation order is not immediately obvious.
@@ -201,8 +201,8 @@ Its syntax is:
 \begin{center}
 \verb|condExpr? trueExpr : falseExpr|
 \end{center}
-where \verb|cond| is a \verb|Bool| expression, and \verb|trueExpr| and \verb|falseExpr| are expressions of the same type.
-If \verb|cond| is \verb|True|, the expression evaluates to \verb|trueExpr|; otherwise, it evaluates to \verb|falseExpr|.
+where \verb|condExpr| is a \verb|Bool| expression, and \verb|trueExpr| and \verb|falseExpr| are expressions of the same type.
+If \verb|condExpr| is \verb|True|, the expression evaluates to \verb|trueExpr|; otherwise, it evaluates to \verb|falseExpr|.
 
 \emph{The conditional operator is right-associative} (in fact, it is the only right-associative operator).
 Therefore, \verb|a? x : b? y : z| is equivalent to
@@ -291,17 +291,18 @@ The struct creation expression creates a struct value. Its syntax is
 \subsection{Function and method calls}
 \label{sec:calls}
 
-Functions are described \autoref{sec:functions}. The function call expression allows invoking a function. Its syntax is:
+Functions are described in \autoref{sec:functions}. The function call expression allows invoking a function. Its syntax is:
 \begin{center}
   \verb|funcName|\tmp{$[$}\verb|#(param1, ..., paramK)|\tmp{$]$}\tmp{$[$}\verb|(argExpr1, ..., argExprN)|\tmp{$]$}
 \end{center}
 where \verb|funcName| is the name of the function, \verb|param|$_{\verb|i|}$ are the function's parameters,
 and \verb|argExpr|$_{\verb|i|}$ are the function's arguments.
-Parameters must be specified if the function is parametric (\autoref{sec:parametrics}), and can't be specified otherwise.
-Eanch parameter must be a type or an \verb|Integer| expression.
+Parameters must be specified if the function is parametric (see \autoref{sec:parametrics} for details and examples on parametric functions),
+and can't be specified otherwise.
+%Each parameter must be a type or an \verb|Integer| expression.
 Arguments are optional because it's possible to have functions without arguments. 
 
-Methods allow modules to return values, and are described in \autoref{sec:methods}. The method call expression has the following syntax:
+Methods allow modules to return values, and are described in \autoref{sec:modules}. The method call expression has the following syntax:
 \begin{center}
     \verb|submoduleName.methodName|\tmp{$[$}\verb|(argExpr1, ..., argExprN)|\tmp{$]$}
 \end{center}
