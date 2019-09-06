@@ -38,7 +38,7 @@ Vagrant.configure("2") do |config|
     BSVER=Bluespec-2016.07.beta1
     if [ ! -d ~vagrant/${BSVER} ]; then
       echo "Downloading ${BSVER}"
-      sudo -u vagrant wget -nc -nv http://www.bluespec.com/downloads/${BSVER}.tar.gz
+      sudo -u vagrant wget -nc -nv https://projects.csail.mit.edu/zsim/bsv/${BSVER}.tar.gz
       sudo -u vagrant tar xzf ${BSVER}.tar.gz
       sudo -u vagrant cp /usr/lib/x86_64-linux-gnu/libgmp.so.10 ${BSVER}/libgmp.so.3
       echo "# Bluespec config" >> ~vagrant/.bashrc
