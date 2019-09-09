@@ -1,9 +1,32 @@
 \section{Structure of a Minispec Design}
 \label{sec:design}
 
-File structure: top-level statements, etc.
+A Minispec design consists of one or more \emph{Minispec source files}.
+Each source file should be a plain text file with extension \verb|.ms|.
+Each source file can define its own used-defined types (\autoref{sec:userdefined}),
+functions (\autoref{sec:functions}), modules (\autoref{sec:modules}),
+and two other top-level statements not yet described: \emph{constants} and \emph{imports}.
 
-Multi-file designs: imports, import semantics (order, parametrics allowed, etc.), bsvimport.
+\paragraph{Constants} are declared just like variables and must be initialized at declaration.
+They may be read elsewhere but may not be changed. They are not state
+(i.e., not like a global variable in other languages) and are simply a convenience
+to avoid hardcoding constant values throughout the design.
 
-Simulation and debugging: System tasks and functions
-\label{sec:systemFunctions}
+\paragraph{Import} statements allow including the definitions from other files in the current one.
+Their syntax is \verb|import file;|, where \verb|file| is the name of the imported file without the \verb|.ms| extension.
+For example, \verb|import Example;| would import file \verb|Example.ms|.
+\verb|file| can be uppercase or lowercase.
+\verb|file| cannot include a directory: the imported file must be
+in either the current directory or the compiler's search path (\autoref{sec:tools}).
+
+Import statements may appear anywhere (they need not be at the top of the file).
+An import statement is equivalent to including the contents of the imported file (and transitively, its own imported files)
+before the current file.
+A file can be imported multiple times, e.g., from several files in the same design.
+Import cycles
+(e.g., \verb|file1.ms| with \verb|import file2;| and \verb|file2.ms| with \verb|import file1;|).
+are not allowed, and will cause a compiler error.
+
+Finally, Minispec code may also import BSV code through a \textbf{bsvimport} statement, with syntax
+\verb|bsvimport BsvFile;|. Following BSV conventions, \verb|BsvFile| must be uppercase.
+This translates to an import statement in BSV, with its usual semantics.

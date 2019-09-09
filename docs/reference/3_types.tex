@@ -31,7 +31,7 @@ Bit#(16) halfWord;
 Vector#(8, Bool) boolVec;
 
 // A Vector of 16 Bit#(32)s
-Vector#(16, Bit#(32)) wordVec;
+Vector#(16,Bit#(32)) wordVec;
 \end{mscode}
 \vspace{-2em}
 \end{wrapfigure}
@@ -63,12 +63,12 @@ This makes code more verbose but reduces mistakes.
 
 \begin{mscode}
 Bool b = True;
-Bit#(1) x = b;  // Error, cannot convert from Bool to Bit#(1)
+Bit#(1) x = b;         // Error, cannot convert from Bool to Bit#(1)
 Bit#(1) y = b? 1 : 0;  // OK, uses ternary operator to convert explicitly
 
 Bit#(4) i = 12;
-Bit#(8) j = i;  // Error, mismatched bit-widths 4 and 8
-Bit#(8) k = {0, i};  // OK, uses concatenation to zero-extend i
+Bit#(8) j = i;         // Error, mismatched bit-widths 4 and 8
+Bit#(8) k = {0, i};    // OK, uses concatenation to zero-extend i
 \end{mscode}
 
 \begin{wrapfigure}{r}{0.32\columnwidth}

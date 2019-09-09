@@ -1,0 +1,78 @@
+\section{System functions}
+\label{sec:systemFunctions}
+
+System functions are useful for simulation and debugging. 
+They are used to display information, read and write data,
+and terminate the simulation.
+They are not synthesizable to hardware,
+and are only used when simulating a module.
+
+All system functions begin with a dollar sign (\verb|$|).
+System functions are called like normal functions.
+System functions \emph{may only be used within module rules}, as they have side effects.
+Calls to a system function from a function or method will cause a compiler error.
+
+% FIXME(dsm): babysit
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-6em}
+\begin{mscode}
+// Test harness for Counter8
+// module from Section 9
+import counter8;
+module Counter8Test;
+  Counter8 c;
+  Reg#(Bit#(10)) cycle;
+  rule tick;
+    c.increment =
+     (cycle[0] == 1'b1);
+    $display("cycle ", cycle,
+     ", count ", c.getCount);
+    if (cycle == -1) $finish;
+    cycle <= cycle + 1;
+  endrule
+endmodule
+\end{mscode}
+\vspace{-6em}
+\end{wrapfigure}
+
+The two main system functions are \verb|$finish| and \verb|$display|.
+
+\paragraph{\texttt{\$finish}} terminates the simulation. It takes no arguments.
+
+\paragraph{\texttt{\$display}} prints strings to standard output.
+It takes a variable number of arguments, which can be strings or other values.
+
+As shown in the examples below, every value that is not a string will be interpreted as an n-bit value and printed as a decimal number by default.
+To print numbers in other bases, \verb|$display| can use the same syntax as C's \verb|printf|,
+using format strings with \verb|%b| for binary, \verb|%d| for decimal, and \verb|%h| or \verb|%x| for hexadecimal values.
+
+\begin{mscode}
+$display("Hello world!");                 // Prints "Hello world!"
+$display("Hello", " ", "world!");         // Prints "Hello world!"
+// Printing non-string values
+Bit#(8) x = 42;
+$display("x in decimal is ", x);          // Prints "x in decimal is 42"
+// Using printf-style formatting
+$display("0b%b == %d == 0h%h", x, x, x);  // Prints "0b00101010 ==  42 == 0x2a"
+\end{mscode}
+
+Still, displaying complex types like structs as one long number is inconvenient.
+The \textbf{\texttt{fshow}} function automatically formats complex types, as shown in the example below.
+\texttt{fshow} can be used on values of any type.
+% dsm: i.e., in BSV land, every typedef includes deriving(FShow)
+
+\begin{mscode}
+typedef struct { Bit#(8) red; Bit#(8) green; Bit#(8) blue; } Pixel;
+Pixel cyan = Pixel{ red : 0, green : 255, blue : 255 };
+$display(cyan);         // Prints "   65535"
+$display(fshow(cyan));  // Prints "Pixel { red: 'h00, green: 'hff, blue: 'hff }"
+\end{mscode}
+
+\texttt{\$display} terminates every printed string with a newline. If you do not want this behavior, use \textbf{\texttt{\$write}},
+which uses the same syntax as \texttt{\$display}.
+
+\paragraph{Other system functions:} Minispec can use other system functions from BSV,
+e.g., to read standard input or to read and write data from/to files.
+BSV system functions are described Section 12.8 of the
+\href{http://csg.csail.mit.edu/6.S078/6_S078_2012_www/resources/reference-guide.pdf}{BSV reference}.
+They are rarely needed.
