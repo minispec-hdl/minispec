@@ -23,4 +23,4 @@ cp $SRC_DIR/minispec.js notebook/static/components/codemirror/mode/minispec/
 (cd notebook/static/components/codemirror/mode/ && patch < $SRC_DIR/meta.js.patch)
 
 # Install
-sudo pip install .
+sudo -H pip install .
