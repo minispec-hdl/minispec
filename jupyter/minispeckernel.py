@@ -142,7 +142,7 @@ class MinispecKernel(Kernel):
 
         # Produce history
         combineArgs = " ".join(self.history_files + [codeFile])
-        if self.runCmd("(cd %s && /vagrant/minispec-combine %s > History___.ms)" % (tmpDir, combineArgs), display=mscDisplay): return errMsg
+        if self.runCmd("(cd %s && minispec-combine %s > History___.ms)" % (tmpDir, combineArgs), display=mscDisplay): return errMsg
        
         # Produce top-level file. This leverages the fact that the compiler
         # flattens imports to avoid modifying the actual input files, which
@@ -153,14 +153,14 @@ class MinispecKernel(Kernel):
 
         # All magics have to compile the code, so do a basic compile only if there are no magics
         if len(magics) == 0:
-            if self.runCmd("(cd %s && /vagrant/msc '%s' -p '%s')" % (tmpDir, topFile, userDir), display=mscDisplay): return errMsg;
+            if self.runCmd("(cd %s && msc '%s' -p '%s')" % (tmpDir, topFile, userDir), display=mscDisplay): return errMsg;
 
         for magic in magics:
             (cmd, _, args) = magic.partition(" ")
             args = args.strip()
             if cmd == "sim":
                 modName = args
-                if self.runCmd("(cd %s && /vagrant/msc '%s' '%s' -p '%s')" % (tmpDir, topFile, modName, userDir), display=mscDisplay): return errMsg
+                if self.runCmd("(cd %s && msc '%s' '%s' -p '%s')" % (tmpDir, topFile, modName, userDir), display=mscDisplay): return errMsg
                 if self.runCmd("(cd %s && ./%s)" % (tmpDir, modName), display=simDisplay): return errMsg
             elif cmd == "eval":
                 # TODO: Pre-check expr is a valid expression (use MinispecParser/msutil)
@@ -181,7 +181,7 @@ module Eval___;
   endrule
 endmodule''' % (expr, expr)
                 writeFile(evalFile, evalCode)
-                if self.runCmd("(cd %s && /vagrant/msc Eval___.ms Eval___ -p '%s')" % (tmpDir, userDir), display=mscDisplay): return errMsg
+                if self.runCmd("(cd %s && msc Eval___.ms Eval___ -p '%s')" % (tmpDir, userDir), display=mscDisplay): return errMsg
                 if self.runCmd("(cd %s && ./Eval___)" % tmpDir, display=simDisplay): return errMsg
             elif cmd == "synth":
                 def synthDisplay(self, name, text):
