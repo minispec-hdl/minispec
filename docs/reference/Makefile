@@ -15,7 +15,7 @@ $(TGT): figs
 	# Preserve metadata
 	pdftk $(TGT).pdf dump_data output metadata.txt
 	pdftk $(TGT)_opt.pdf update_info metadata.txt output $(TGT).pdf
-	rm $(TGT)_opt.pdf
+	#rm $(TGT)_opt.pdf
 
 tidy:
 	make -C figures clean

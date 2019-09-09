@@ -17,9 +17,9 @@ register update their values, placing the FSM into the next state.
 Minispec modules have four key elements that correspond to the components of FSMs:
 \begin{compactenum}
 \item \emph{Submodules}, which can be registers or other user-defined modules to allow composition of modules.
-\item \emph{Methods}, which implement combinational logic to produce \emph{outputs} given some inputs arguments and the current state.
+\item \emph{Methods}, which implement combinational logic to produce \emph{outputs} given some input \emph{arguments} and the current state.
 \item \emph{Rules}, which implement combinational logic to produce the \emph{next state} given some external \emph{inputs} and the current state.
-\item \emph{Inputs}, which represent external signals used by rules.
+\item \emph{Inputs}, which represent external signals controlled by the enclosing module.
 \end{compactenum}
 
 \begin{figure}[h]
@@ -47,17 +47,24 @@ Minispec modules have four key elements that correspond to the components of FSM
 \end{figure}
 
 
-
 \autoref{fig:basicmodule} shows the structure of a basic module with registers but no other submodules.
 Comparing \autoref{fig:fsm} and \autoref{fig:basicmodule}, the key difference
 is the distinction between inputs and method arguments: whereas combinational logic in FSMs
 can use any input to produce both the next state and the output,
 module methods use \emph{arguments} to produce outputs, separate from the \emph{inputs} used by rules.
-As we will see, this separation \emph{makes hierarchical composition easy}:
+As we will see, this separation \emph{makes hierarchical composition easy} (\autoref{sec:basicmodsemantics}).
 \autoref{fig:hiermodule} shows a general module that includes submodules other than registers.
-The separation between method arguments and rule inputs allows modules to instantiate and use
-arbitrary submodules \emph{while avoiding combinational cycles}, i.e., ensuring that combinational logic
-remains acyclic.
+The separation between rule inputs and method arguments
+allows modules to instantiate and use arbitrary submodules \emph{while avoiding combinational cycles},
+i.e., ensuring that combinational logic remains acyclic.
+
+% TODO(dsm): I've gotten feedback that this doesn't explain why, but I don't think this explanation belongs here. This is the intro, and the paragraph says "as we will see"; this expla should probably be in 9.3.
+%To see why this is the case, consider a different approach where we only had inputs
+%and a single block of combinational logic produced both the outputs and the inputs for submodules.
+%Without knowing the implementation details of its submodules, a module could wire up submodule inputs and outputs
+%in a way that created a combinational cycle, e.g., by setting an input to a submodule
+%to a value that depends on one of its outputs.
+%By contrast, methods require arguments to be provided before outputs, avoiding combinational cycles.
 
 Modules need not follow a strict hierarchy, but a hierarchical design has simpler semantics.
 Thus, we first focus on modules that follow a strict hierarchy (\autoref{sec:basicmodsemantics}). %and where each module has a single rule.
@@ -78,9 +85,9 @@ which can then be instantiated as a submodule in other modules
 or as the top-level module.
 Modules meant to be submodules can have optional \emph{module arguments},
 \verb|arg|$_{\texttt{i}}$, with types \verb|Type|$_{\texttt{i}}$.
-These arguments can be constant values (e.g., used so set initial values),
+These arguments can be constant values (e.g., used to set initial values),
 or other modules.
-The body of the module can have declare submodules, methods, inputs, rules, and constants,
+The body of the module can declare submodules, methods, inputs, rules, and constants,
 whose syntax is explained below and shown in the examples to the right.
 
 Modules can be parametric; see \autoref{sec:parametrics} for details.
@@ -101,6 +108,57 @@ and \emph{have no side effects}.
 They can call methods in submodules or read register values,
 but they cannot set the inputs of submodules or write to any register
 (these are side effects, which only rules can have).
+
+\begin{wrapfigure}{r}{0.32\columnwidth}
+\vspace{-2em}
+\begin{mscode}
+// 8-bit counter that can be
+// incremented every cycle
+module Counter8;
+  Reg#(Bit#(8)) count(0);
+
+  method Bit#(8) getCount;
+    return count;
+  endmethod
+
+  input Bool increment
+    default = False;
+
+  rule tick;
+    if (increment)
+      count <= count + 1;
+  endrule
+endmodule
+
+// 16-bit counter built from 
+// two Counter8 submodules
+module Counter16;
+  Counter8 lo(0);
+  Counter8 hi(0);
+
+  method Bit#(16) getCount =
+   {hi.getCount,lo.getCount};
+
+  input Bool increment
+    default = False;
+
+  rule tick;
+    if (increment) begin
+      lo.increment = True;
+      // Increment hi when lo
+      // is about to overflow
+      hi.increment =
+       (lo.getCount == 255);
+    end
+  endrule
+endmodule
+
+\end{mscode}
+
+\vspace{-9em}
+\end{wrapfigure}
+
+
 
 Methods use a syntax nearly identical to functions:
 \begin{center}
@@ -127,9 +185,9 @@ Methods also support the same shorthand syntax as functions:
 
 \subparagraph{Use:}
 A method may be called from the methods or rules of its enclosing module.
-The syntax for a method call (\autoref{sec:calls}) is
-\verb|submoduleName.methodName(arg1, ..., argN)|.
-
+The syntax for a method call is
+\verb|submoduleName.methodName(arg1, ..., argN)|
+(\autoref{sec:calls}).
 
 
 \paragraph{Inputs} specify external inputs that are controlled by
@@ -142,38 +200,13 @@ where \verb|Type| is the input's name,
 and the optional \verb|defaultExpr| specifies a default value for the input.
 
 \subparagraph{Use:}
-Inputs can be read within the module just like normal variables, but cannot be set.
+Inputs can be read within the module just like variables, but cannot be set.
 
 Inputs can be set within a rule of the enclosing module,
-with syntax \verb|submoduleName.inputName = expr;|,
-like a normal assignment.
+with syntax like a normal assignment, \verb|submoduleName.inputName = expr;|.
 If the input does not have a default value,
 the enclosing module \emph{must} set the input every cycle.
 If the input has a default value, then setting the input is optional.
-
-\begin{wrapfigure}{r}{0.32\columnwidth}
-\vspace{-2em}
-\begin{mscode}
-// 8-bit counter that can be
-// incremented every cycle
-module Counter;
-  Reg#(Bit#(8)) count(0);
-
-  method Bit#(8) getCount;
-    return count;
-  endmethod
-
-  input Bool increment
-    default = False;
-
-  rule tick;
-    if (increment)
-      count <= count + 1;
-  endrule
-endmodule
-\end{mscode}
-\vspace{-6em}
-\end{wrapfigure}
 
 An input can only be set \emph{once}. Trying to assign to the input multiple
 times within a cycle will cause a compiler error.
@@ -268,22 +301,24 @@ and data flows outside-in through inputs and rules.
 \subsection{General semantics of modules (advanced)}
 \label{sec:generalmodsemantics}
 
+% TODO: Place correctly once earlier content is settled; this inset is not that important
 \begin{wrapfigure}{r}{0.32\columnwidth}
 \vspace{-4em}
 \begin{mscode}
 module FIFO;
-  input Bit#(4) enqueue;
-  method Bit#(4) first;
-    ...
-  endmethod
-  method Bool isFull;
+  input Maybe#(Bit#(4))
+   enqueue default = Invalid;
+  method Maybe#(Bit#(4))
+   first = ...;
+  method Bool isFull = ...;
+  ...
 endmodule
 
 module Prod(FIFO outQ);
   ...
   rule produce;
-    if (!outQ.full)
-      outQ.enqueue = Valid(val);
+    if (!outQ.isFull)
+     outQ.enqueue = Valid(v);
   endrule
 endmodule
 
@@ -331,7 +366,7 @@ The compiler will find a fixed order for the rules, and will emit an error on an
 For instance, in our producer-consumer example, the FIFO queue module could have an
 \texttt{enqueue} input and a \texttt{first} method that returns that input if the queue has no buffered values.
 Because \texttt{consumer} calls \texttt{first}, \texttt{first} reads \texttt{enqueue}, and \texttt{producer}
-set \texttt{enqueue}, \texttt{producer}'s rule is ordered before \texttt{consumer}'s.
+sets \texttt{enqueue}, \texttt{producer}'s rule is ordered before \texttt{consumer}'s.
 If there was another constraint in the system that required the reverse order
 (e.g., a queue going in the reverse direction), that would signal a combinational cycle,
 which would cause a compiler error.
@@ -346,7 +381,7 @@ They come in two flavors:
 \item \verb|DWire#(T)| implements a wire with a default value. If the wire is not written in a given cycle,
   reads to the wire return the default value. The wire has no memory: the wire ``reverts'' to the default value every cycle.
 \end{compactitem}
-Wires have the same interface as registers: using the name of the register yields its value,
+Wires have the same interface as registers: using the name of the wire yields its value,
 assignments with \verb|<=| write to it, only rules may write to wires, and multiple writes are not allowed.
 
 Wires introduce order constraints among rules and methods:
@@ -364,15 +399,17 @@ CLK, the \emph{clock signal}, and RST, the \emph{reset signal}.
 Registers are synthesized as collections of 1-bit D flip-flops (DFFs).
 All registers use CLK as their clock.
 Registers with an initial value (i.e., \verb|Reg#(T)|) include reset circuitry
-that sets its value to the initial value then the circuit powers up.
+that sets its value to the initial value when the circuit powers up.
 Because flip-flops hold an arbitrary value when first powered, this is accomplished by
 the RST signal: the RST signal is 1 for a few cycles after power-up,
-letting registers write their initial values with the circuitry \tmp{shown right}.
+letting registers write their initial values with the circuitry \tmp{shown to the right}.
 Registers with no initial value (i.e., \verb|RegU#(T)|) have no reset circuitry.
 
 Registers are always written to by a single rule, but may not be updated every cycle.
 When not updated every cycle, the register includes \emph{write-enable} circuitry
-to optionally retain its old value, as \emph{shown right}.
+to optionally retain its old value, as \emph{shown to the right}.
+
+\todo{Circuit diagrams}
 
 Inputs without a default value are simply wires.
 Inputs with a default value translate to a multiplexer that chooses between

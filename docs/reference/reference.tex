@@ -36,7 +36,8 @@
 \usepackage{color}
 \definecolor{lcolor}{RGB}{0, 56, 186} % {0, 35, 102}
 \definecolor{ucolor}{RGB}{20, 70, 150}
-\usepackage[bookmarks=false, breaklinks=true,letterpaper=true,colorlinks,linkcolor=lcolor,citecolor=lcolor,urlcolor=ucolor]{hyperref}
+% dsm: pdfa keeps links with ps2pdf on gs > 9.25, see https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=910274;msg=60
+\usepackage[bookmarks=false, breaklinks=true,letterpaper=true,colorlinks,linkcolor=lcolor,citecolor=lcolor,urlcolor=ucolor,pdfa]{hyperref}
 \renewcommand\UrlFont{}
 
 % Hyperref fixes

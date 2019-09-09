@@ -9,7 +9,7 @@ Minispec also allows defining parametric functions, modules, structs, and type s
 
 Parametrics enable writing \emph{generic} hardware descriptions
 that are then concretized as needed. For example,
-we can write single a parametric function \texttt{add\#(n)}
+we can write a single parametric function \texttt{add\#(n)}
 that adds two \texttt{n}-bit numbers.
 Then, users of the function will call it with particular values of \texttt{n},
 instantiating adder circuits of different widths.
@@ -140,7 +140,7 @@ This recursion is unrolled at compile time, so it translates to a chain of funct
 The code can specify both a general parametric definition with Integer and type parameters,
 and one or more specialized definitions with fixed integers and types.
 On a match, a specialized definition takes precedence over the general one.
-For example, an alternative defintion of function \texttt{add\#(n)}, shown in \trailref{lst:rcas}{(b)},
+For example, an alternative defintion of function \texttt{rca\#(n)}, shown in \trailref{lst:rcas}{(b)},
 includes a specialized definition of \texttt{rca\#(1)} as a base case to stop recursion.
 
 \paragraph{Static elaboration:} Parametrics require clear guarantees on what computations
@@ -178,7 +178,7 @@ Finally, the compiler instantiates \verb|rca#(1)|.
 no more parametrics are needed and static elaboration terminates.
 
 From the example above, note that recursion stops by relying on elimination of the \verb|else| branch in \verb|rca#(1)|.
-If this did not happen (i.e., if the if's predicate could not be elaborated),
+If this did not happen (i.e., if the \verb|if|'s predicate could not be elaborated),
 then the \verb|else| branch would trigger a call to \verb|rca#(0)| and recursion would not end.
 (To avoid infinite recursion, the compiler limits recursion depth and emits an error when exceeded.)
 

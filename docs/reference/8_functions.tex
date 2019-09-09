@@ -61,7 +61,7 @@ where \verb|fname| is the function's name;
 with types \verb|Type|$_{\texttt{i}}$;
 and \verb|stmt|$_{\texttt{i}}$ are statements.
 
-Functions must return a result by using \emph{return statements} (\autoref{sec:retStmt}).
+Functions must return a result by using \textbf{return statements}. %(\autoref{sec:retStmt}). % dsm: No backref, this is now the primary def for return statement even though sec:statements has a fwd pointer.
 As shown in the examples, simple functions without any conditional statements
 should end with a single return statement.
 Functions can use multiple return statements, e.g., in different branches
@@ -83,7 +83,10 @@ Short functions consisting of a single expression can be declared more succinctl
 where \verb|expr| is an expression of type \verb|RetType| that computes the return value,
 and all other elements are as above.
 
-% dsm: Skipping 1st-class object stuff, because (1) it's too advanced, (2) we don't have proper Minispec Function types yet that obey Minispec syntax, and (3) functions that take/returns functions... cool, but makes synthesis explanation harder.
+% dsm: Skipping 1st-class object stuff, because:
+% (1) it's needlessly advanced for 6.004 
+% (2) we don't have proper Minispec Function types yet that obey Minispec syntax (BSV function types are "function ...", but that breaks our strict "all types are uppercase" rule, so we should have some Function#(RetType,ArgType1...,ArgTypeN) variadic parametric type, perhaps with compiler support since I'm not sure BSV has variadics (maybe with typeclasses?).
+% (3) functions that take/return functions... cool, but makes synthesis explanation harder.
 %\paragraph{Use:} Call expressions (\autoref{sec:calls}) allow invoking a function.
 %Moreover, \emph{functions are first-class objects}, and can be assigned to variables or used anywhere a variable is used.
 
@@ -115,7 +118,7 @@ functions in other programming languages and that enable synthesis to combinatio
 \item \emph{Pure}: Functions compute the output based \emph{only} on the values of its input arguments.
   They cannot use or alter any state or variables outside of the function
   (they may use global constants, however).
-  Thus, given a particular set of imput arguments, a function alwas produces the same output.
+  Thus, given a particular set of imput arguments, a function always produces the same output.
 \item \emph{Acyclic}: Functions have no cycles, i.e., they cannot ``jump back'' to a prior point of execution. 
   % FIXME(dsm): Needs better explanation.
   They are thus always guaranteed to terminate.
@@ -125,11 +128,11 @@ functions in other programming languages and that enable synthesis to combinatio
 \end{compactenum}
 
 \paragraph{Why functions are synthesizable:}
-Given the above properties, it is trivial to show that all functions can be synthesized to combinational circuits.
+Given the above properties, it is easy to show that all functions can be synthesized to combinational circuits.
 Since each input and output takes a fixed number of bits, we can always
 enumerate all input values, build a truth table (computing the output for each input),
 and implement the truth table as a combinational circuit (e.g., as a sum-of-products).
-While this is a simple proof, it is not how circuits are actually synthesized,
+While this is a simple proof, it is not \emph{how} circuits are actually synthesized,
 as building a truth table and deriving an optimized implementation from it
 takes too much space and time for circuits with more than a few bits of inputs.
 
@@ -152,7 +155,7 @@ Specifically:
   and finally their inputs and outputs are wired together in the same tree fashion.
 \item All operators (\autoref{sec:expressions}) can be implemented using combinational circuits.
   Each operator is synthesized as a separate circuit.
-\item Conditional expressions translate to multiplexers: each ternary operator is a 2-to-1 multiplexer, each case statement is an N-to-1 multiplexer.
+\item Conditional expressions translate to multiplexers: each ternary operator is a 2-to-1 multiplexer, and each case expression is an N-to-1 multiplexer.
 \item Concatenation expressions, struct creation expressions, and selection expressions that use statically known indices require wires but no logic:
   they are just combining or selecting bits of existing variables.
   Selection expressions that use dynamic indices require some logic (e.g., a barrel shifter).
