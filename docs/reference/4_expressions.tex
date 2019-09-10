@@ -35,10 +35,10 @@ This means that independent subexpressions in a complex expression can be evalua
 For example, in \texttt{foo(a \&\& b) || foo(b)}, both calls to \texttt{foo}
 can be evaluated in any order (function calls have no side effects).
 
-% TODO: Tool box
-\paragraph{Evaluating standalone expressions:} The Minispec tools let you type and evaluate standalone expressions.
-Use \texttt{ms eval} from the command line (e.g., \verb|ms eval File.ms "a + b"|)
-or the \texttt{\%\%eval} magic from Jupyter (e.g., \texttt{\%\%eval a + b}).
+% dsm: Given the tools section, this is now out of place...
+%\paragraph{Evaluating expressions:} The Minispec tools can evaluate standalone expressions.
+%Use \texttt{ms eval} from the command line (e.g., \verb|ms eval File.ms "a + b"|)
+%or the \texttt{\%\%eval} magic from Jupyter (e.g., \texttt{\%\%eval a + b}).
 
 % dsm: No, defer to static elab, this is much more about semantics
 %\paragraph{Compile-time vs.\ run-time evaluation:}

@@ -96,7 +96,7 @@ then \verb|x[0] = 0| (the least-significant or rightmost bit),
 \verb|x[1] = 1|, \verb|x[2] = 0|,
 and \verb|x[3] = 1| (the most-significant or leftmost bit).
 This is consistent with how digits are always enumerated in a number (according to significance, so the value is $\sum_{i=0}^{n-1}2^ix[i]$),
-but is different from how vectors are indexed.
+but it is different from how vectors are indexed.
 
 The selector \verb|i| in \verb|x[i]| can be a literal, an \verb|Integer|, or a \verb|Bit#(k)| variable. In the first two cases the bit selected is constant,
 which results in an efficient hardware implementation (as no logic gates are required, only wires).
@@ -114,7 +114,7 @@ and the slice will be truncated from the left if the destination is narrower.
 
 
 \begin{wrapfigure}{r}{0.32\columnwidth}
-\vspace{-2em}
+\vspace{-1em}
 \begin{mscode}
 Bit#(2) a = 2'b11;
 Bit#(4) b = 4'b1001;
@@ -186,7 +186,7 @@ all \verb|Integer| expressions must be evaluable by the compiler.
 \label{sec:vector}
 
 \begin{wrapfigure}{r}{0.32\columnwidth}
-\vspace{-5em}
+\vspace{-4em}
 \begin{mscode}
 Vector#(4, Bool) lessThanTwo;
 for (Integer i=0; i<4; i=i+1)
@@ -204,19 +204,18 @@ Bit#(3) j = 3'd1;
 Bool d = lessThanTwo[j];
 // Undefined, out-of-bounds
 Bool e = lessThanTwo[j+3];
-\end{mscode}
-\vspace{-4.5em}
-\end{wrapfigure}
 
-% dsm: Deferred
-%// Vector of submodules
-%module Example;
-%  // Vector of 4 8-bit regs,
-%  // all initialized to 0
-%  Vector#(4, Reg#(Bit#(8)))
-%    regVector(4'd0);
-%  [...]
-%endmodule
+// Vector of submodules
+module Example;
+  // Vector of 4 8-bit regs,
+  // all initialized to 0
+  Vector#(4, Reg#(Bit#(8)))
+    regVector(4'd0);
+  [...]
+endmodule
+\end{mscode}
+\vspace{-6em}
+\end{wrapfigure}
 
 \verb|Vector#(n, T)| represents a vector or array of \verb|n| elements of type \verb|T|.
 
@@ -246,6 +245,8 @@ Appendix C.3 of the \href{http://csg.csail.mit.edu/6.S078/6_S078_2012_www/resour
 describes several functions for working with vectors,
 which can also be used in Minispec code.
 
+\newpage
+
 \begin{wrapfigure}{r}{0.32\columnwidth}
 \vspace{-4em}
 \begin{mscode}
@@ -263,8 +264,8 @@ let y = fromMaybe(4, b); // 4
 // Common unpacking idiom:
 // the if condition checks
 // validity, so fromMaybe's
-// arg is always valid and the
-// default value is irrelevant
+// arg is always valid and
+// defaultValue is irrelevant
 if (isValid(a)) begin
   let aVal = fromMaybe(?, a);
   [...]

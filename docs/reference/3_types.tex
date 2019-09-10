@@ -21,8 +21,16 @@ and can be converted to and from \texttt{Bit\#(n)} (\autoref{sec:bit}).
 %(it has an unbounded number of bits!)
 and can only be used at compile time.
 
+\paragraph{User-defined types:} Minispec supports three kinds of user-defined types:
+\begin{compactitem}
+\item \emph{Type synonyms} allow giving a different name to a type.
+\item \emph{Structs} represent collections of values.
+\item \emph{Enumerations} or enums allow defining a set of unique symbolic constants, also called labels.
+\end{compactitem}
+\autoref{sec:userdefined} describes user-defined types in detail.
+
 \begin{wrapfigure}{r}{0.32\columnwidth}
-\vspace{-2.8em}
+\vspace{-2em}
 \begin{mscode}
 // A 16-bit value
 Bit#(16) halfWord;
@@ -37,21 +45,13 @@ Vector#(16,Bit#(32)) wordVec;
 \end{wrapfigure}
 
 \paragraph{Parametric types:} Types of the form \texttt{Type\#($\rho_1$,...,$\rho_n$)} are called parametric types
-(also known as polymorphic types, generics, or templated types in other languages).
+(also known as polymorphic types or generics in other languages).
 Parametric types take one or more parameters ($\rho_i$), which can be either \texttt{Integer} values or other types.
 These parameters must be known at compile time, and make the type concrete.
 Several of the built-in types are parametric, as shown in the examples.
 
 Beyond parametric types, Minispec also supports parametric functions, modules, structs, and type synonyms
 using a consistent syntax and semantics, which \autoref{sec:parametrics} describes in detail.
-
-\paragraph{User-defined types:} Minispec supports three kinds of user-defined types:
-\begin{compactitem}
-\item \emph{Type synonyms} allow giving a different name to a type.
-\item \emph{Structs} represent collections of values.
-\item \emph{Enumerations} or enums allow defining a set of unique symbolic constants, also called labels.
-\end{compactitem}
-\autoref{sec:userdefined} describes user-defined types in detail.
 
 \paragraph{Type conversions are explicit, except for Integers:}
 Unlike in some languages, in Minispec almost all conversions between values of different types are explicit.
