@@ -22,7 +22,7 @@ In Minispec, parametrics play a more important role,
 because combinational logic has limitations that programming languages do not (it is not Turing-complete).
 Thus, \emph{parametrics and compile-time specialization enables functionality that cannot be implemented with combinational logic}.
 For example, in a programming language without parametrics (like C),
-we could always write a procedure that adds two numbers of arbitrary bitwidths,
+we could always write a procedure that adds two numbers of arbitrary bit-widths,
 e.g., by looping over their bits and adding them one by one.
 %(the width would be a runtime \emph{argument} to such procedure).
 But we cannot implement a single function (combinational circuit)
@@ -124,7 +124,7 @@ endfunction
 
 \vspace{-0.22in}
 \hbox{\hspace{3.23in} {(a)} \hspace{3.33in} {(b)}}
-\caption{Two ripple-carry adder implementations using recusive parametric functions. (a) uses a single function,
+\caption{Two ripple-carry adder implementations using recursive parametric functions. (a) uses a single function,
 whereas (b) splits the base case into a separate specialized parametric function definition.}
 \label{lst:rcas}
 \end{listing}
@@ -140,7 +140,7 @@ This recursion is unrolled at compile time, so it translates to a chain of funct
 The code can specify both a general parametric definition with Integer and type parameters,
 and one or more specialized definitions with fixed integers and types.
 On a match, a specialized definition takes precedence over the general one.
-For example, an alternative defintion of function \texttt{rca\#(n)}, shown in \trailref{lst:rcas}{(b)},
+For example, an alternative definition of function \texttt{rca\#(n)}, shown in \trailref{lst:rcas}{(b)},
 includes a specialized definition of \texttt{rca\#(1)} as a base case to stop recursion.
 
 \paragraph{Static elaboration:} Parametrics require clear guarantees on what computations

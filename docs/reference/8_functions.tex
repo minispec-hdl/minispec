@@ -118,7 +118,7 @@ functions in other programming languages and that enable synthesis to combinatio
 \item \emph{Pure}: Functions compute the output based \emph{only} on the values of its input arguments.
   They cannot use or alter any state or variables outside of the function
   (they may use global constants, however).
-  Thus, given a particular set of imput arguments, a function always produces the same output.
+  Thus, given a particular set of input arguments, a function always produces the same output.
 \item \emph{Acyclic}: Functions have no cycles, i.e., they cannot ``jump back'' to a prior point of execution. 
   % FIXME(dsm): Needs better explanation.
   They are thus always guaranteed to terminate.
@@ -138,7 +138,7 @@ takes too much space and time for circuits with more than a few bits of inputs.
 
 \paragraph{How functions are synthesized:}
 In practice, Minispec functions are synthesized by composing smaller building blocks.
-This exploits that combinationsl circuits \emph{compose easily}:
+This exploits that combinational circuits \emph{compose easily}:
 a circuit composed of multiple combinational devices connected with wires is also combinational
 if each input of the constituent devices is tied to a single output or a constant value,
 and if the network is \emph{acyclic}, i.e., it has no directed cycles
