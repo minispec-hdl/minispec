@@ -1,9 +1,78 @@
 \section{Minispec Tools}
 \label{sec:tools}
 
+Minispec includes an easy-to-use toolset to simulate and synthesize circuits.
+We first describe its command-line interface, than its Jupyter interface.
 
+\subsection{Command-line tools}
+\label{sec:cli}
 
-Command-line: msc, ms eval/sim/synth; synth
+\paragraph{\texttt{ms}} is Minispec's high-level command-line interface. \texttt{ms} provides four commands:
+\begin{compactitem}
+\item \verb|ms eval [<file>] <expression>                  | Evaluate expression
+\item \verb|ms sim <file> <module>                         | Simulate module
+\item \verb|ms synth <file> <function/module> <synthArgs>  | Synthesize function or module into gates
+\item \verb|ms help                                        | Print help message
+\end{compactitem}
+\begin{wrapfigure}{r}{0.35\columnwidth}
+\vspace{-1.5em}
+\begin{minted}[bgcolor=bashbg]{bash}
+# Evaluate "2 + 3"
+ms eval "2 + 3"
+# Evaluate add#(4)(2, 3), where
+# add is defined in file add.ms
+ms eval add.ms "add#(4)(2, 3)"
 
-Jupyter: Semantic differences, eval/sim/synth magics.
+# Simulate module TestCounter
+# in file counter.ms
+ms sim counter.ms TestCounter
+
+# Synthesize function add#(4)
+ms synth add.ms "add#(4)"
+# Synthesize module Counter
+ms synth counter.ms Counter
+\end{minted}
+\vspace{-4em}
+\end{wrapfigure}
+
+The \verb|<file>| argument should be a Minispec source file with the target function or module.
+The file argument is optional for \verb|ms eval|, as it is not needed if the expression does not
+call any user-defined functions.
+Arguments should be quoted as needed to avoid being interpreted by the shell.
+
+For more details, run \verb|ms help|.
+
+Internally, \verb|ms| uses two lower-level tools:
+\textbf{\texttt{msc}}, the Minispec compiler, which compiles functions or modules into BSV, Verilog, or a simulation executable;
+and \textbf{\texttt{synth}}, a synthesis tool for Minispec and Bluespec circuits that leverages the \verb|yosys| open-source synthesis suite
+to produce optimized gate-level implementations.
+These tools can be used directly; run \texttt{msc -h}
+or \texttt{synth -h} for usage instructions.
+
+\subsection{Jupyter interface} 
+
+Minispec is integrated with \href{https://jupyter.org/}{Jupyter} notebooks.
+Minispec Jupyter notebooks follow the usual conventions for notebooks in other languages:
+Minispec code can be spread across multiple \emph{code cells},
+which the notebook user can execute individually or in sequence.
+A code cell can use or redefine functions, modules, types, or constants defined in previously executed cells.
+Redefined functions or modules can be used by later code,
+but previously executed cells still use the old definitions.
+In a Minispec notebook, ``executing'' a code cell only checks the code for errors.
+To provide additional capabilities, %for evaluating, simulating, and synthesizing circuits,
+cells can include additional built-in commands called \emph{magics}.
+
+\paragraph{Magics:} Minispec notebooks provide four magics:
+\texttt{\%\%eval}, \texttt{\%\%sim}, \texttt{\%\%synth}, and \texttt{\%\%help}.
+Each of these magics has the same purpose as the \texttt{ms} command with the same name (\autoref{sec:cli}),
+and follows a similar syntax.
+
+There are two syntax differences between Jupyter magics and \texttt{ms} commands.
+First, Jupyter magics do not take a file argument;
+instead, they work on the code from executed cells.
+Second, Jupyter magics do not need quotes on expressions
+or parametric functions or modules, as they are not interpreted by the shell.
+
+The \href{https://6004.mit.edu/web/fall19/resources}{Jupyter notebook tutorials} on combinational and sequential logic
+serve as detailed examples on using Jupyter notebooks and the different magics.
 
