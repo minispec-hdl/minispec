@@ -40,7 +40,7 @@ can be evaluated in any order (function calls have no side effects).
 %Use \texttt{ms eval} from the command line (e.g., \verb|ms eval File.ms "a + b"|)
 %or the \texttt{\%\%eval} magic from Jupyter (e.g., \texttt{\%\%eval a + b}).
 
-% dsm: No, defer to static elab, this is much more about semantics
+% dsm: Deferred to parametrics / static elab, this is much more about semantics
 %\paragraph{Compile-time vs.\ run-time evaluation:}
 
 \subsection{Unary and binary operators}
@@ -213,7 +213,7 @@ Therefore, \verb|a? x : y + z| is equivalent to \verb|a? x : (y + z)|,
 and \emph{not} \verb|(a? x : y) + z|.
 
 \begin{wrapfigure}{r}{0.32\columnwidth}
-\vspace{-2em}
+\vspace{-1.5em}
 \begin{mscode}
 Bit#(2) v = 2'b10;
 
@@ -241,7 +241,7 @@ endcase
 \verb|  value1 : expr1;         | \\
 \verb|  value2 : expr2;         | \\
 \verb|        ...               | \\
-\verb|  | \tmp{$[$} \verb|default : defaultExpr;  |\tmp{$]$} \\
+\verb|| \optStart \verb| default : defaultExpr; |\optEnd \\
 \verb|endcase                   |
 \end{center}
 where \verb|compExpr|, \verb|expr|$_{\verb|i|}$, and \verb|defaultExpr| are expressions,
@@ -257,16 +257,13 @@ A case expression that does not enumerate all possible values and does not have 
 item will produce a compiler error.
 
 %\todo{IIRC there was some Bluespec oddity regarding parentheses on case expressions, maybe due to pattern matching. If that's the case, GO FIX IT IN THE COMPILER.}
-%
 %\todo{Remove blockExpr from Minispec syntax, turn blockExpr into blockStmt; ditto for returnExpr, make it a Stmt; and nix the ``expression ;'' statement.}
-%
-%\tmp{Subsections below still TODO, are the same as Bluespec. Might want to merge all type-specific expressions under the same heading. Also, add examples to case statements.}
 
 \subsection{Selection and concatenation expressions}
 
 Selection expressions use brackets (\verb|[]|) to select a bit or range of bits from a \verb|Bit#(n)| value,
 or an element from a \verb|Vector#(n,T)|.
-Their syntax is \verb|expr[ startExpr|\tmp{$[$}\verb|:endExpr|\tmp{$]$}\verb|]|.
+Their syntax is \verb|expr[ startExpr|\optStart\verb|:endExpr|\optEnd\verb| ]|.
 \autoref{sec:bit} describes the semantics of selection expressions for \verb|Bit#(n)|,
 and \autoref{sec:vector} describes the semantics for \verb|Vector#(n,T)|.
 
@@ -293,7 +290,7 @@ The struct creation expression creates a struct value. Its syntax is
 
 Functions are described in \autoref{sec:functions}. The function call expression allows invoking a function. Its syntax is:
 \begin{center}
-  \verb|funcName|\tmp{$[$}\verb|#(param1, ..., paramK)|\tmp{$]$}\tmp{$[$}\verb|(argExpr1, ..., argExprN)|\tmp{$]$}
+  \verb|funcName|\optStart\verb|#(param1, ..., paramK)|\optEnd\optStart\verb|(argExpr1, ..., argExprN)|\optEnd
 \end{center}
 where \verb|funcName| is the name of the function, \verb|param|$_{\verb|i|}$ are the function's parameters,
 and \verb|argExpr|$_{\verb|i|}$ are the function's arguments.
@@ -304,7 +301,7 @@ Arguments are optional because it's possible to have functions without arguments
 
 Methods allow modules to return values, and are described in \autoref{sec:modules}. The method call expression has the following syntax:
 \begin{center}
-    \verb|submoduleName.methodName|\tmp{$[$}\verb|(argExpr1, ..., argExprN)|\tmp{$]$}
+    \verb|submoduleName.methodName|\optStart\verb|(argExpr1, ..., argExprN)|\optEnd
 \end{center}
 where \verb|submoduleName| is the name of the submodule instance that implements the method,
 \verb|methodName| is the name of the method, and \verb|argExpr|$_{\verb|i|}$ are the method's arguments.
