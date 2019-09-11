@@ -14,11 +14,13 @@ function Bool and2(Bool a,
   return a && b;
 endfunction
 
-function Bool and3(Bool a,
+function Bool and4(Bool a,
                    Bool b,
-                   Bool c);
+                   Bool c,
+                   Bool d);
   Bool ab = and2(a, b);
-  return and2(ab, c);
+  Bool cd = and2(c, d);
+  return and2(ab, cd);
 endfunction
 
 // Functions can have 
@@ -36,6 +38,7 @@ function Bit#(1) p(Bit#(3) x)
   = x[0] ^ x[1] ^ x[2];
 \end{mscode}
 \vspace{-6em}
+\label{lst:functions}
 \end{wrapfigure}
 
 %// Functions are first-class
@@ -76,7 +79,7 @@ A function may have no arguments.
 Functions can be parametric; see \autoref{sec:parametrics} for details.
 
 \paragraph{Definition by assignment:}
-Short functions consisting of a single expression can be declared more succinctly using the following syntax:
+Short functions consisting of a single expression can be defined more succinctly using the following syntax:
 \begin{center}
 \verb|function RetType fname(Type1 arg1, ..., TypeN argN) = expr;|
 \end{center}
@@ -144,10 +147,19 @@ if each input of the constituent devices is tied to a single output or a constan
 and if the network is \emph{acyclic}, i.e., it has no directed cycles
 (which may create feedback loops).
 
+\begin{wrapfigure}{r}{0.34\columnwidth}
+\vspace{-2.5em}
+\centering
+\includegraphics[height=1.75in]{figures/ag_synthesis.pdf}
+\caption{Synthesized functions from the examples in \autopageref{lst:functions}.}
+%\vspace{-1em}
+\label{fig:synthesis}
+\vspace{-1.5em}
+\end{wrapfigure}
 Since Minispec functions are acyclic, one can synthesize a function by synthesizing each syntax element
-(expressions, statements, etc.) and connecting them.
+(expression, statement, etc.) and connecting them.
 Though the details of synthesis depend on the compiler and tools used,
-it is useful to roughly understand how different syntax elements are translated and composed.
+it is useful to roughly understand how syntax elements are translated and composed.
 Specifically:
 \begin{compactitem}
 % Expressions
@@ -159,6 +171,9 @@ Specifically:
 \item Concatenation expressions, struct creation expressions, and selection expressions that use statically known indices require wires but no logic:
   they are just combining or selecting bits of existing variables.
   Selection expressions that use dynamic indices require some logic (e.g., a barrel shifter).
+\end{compactitem}
+\hfill \vspace{-2.35em}  % dsm: work around wrapfig placement...
+\begin{compactitem}
 \item Functions are \emph{inlined}: each function call instantiates a separate circuit implementing the function, which is then synthesized.
   (since there's no recursion, inlining always terminates).
 % Statements
@@ -172,11 +187,16 @@ Specifically:
   and the multiplexer selects between the value in the if branch and the value in the else branch.
 \item Case statements are similar to if statements, requiring a multiplexer for each value assigned
   within the statement to select the right branch.
-\item For loops are \emph{unrolled}: Each iteration is expanded into a separate block, then synthesized as usual.
+\item For loops are \emph{unrolled} (\autoref{sec:controlStmts}): Each iteration is expanded into a separate block, then synthesized as usual.
 \item A single return statement at the end of the function simply names the output of the function and requires no logic.
   In functions with multiple return statements, the output value is selected using multiplexers similar to if-else statements.
 \end{compactitem}
 
-\todo{Figures showing the synthesis of several snippets.}
-
+\paragraph{Synthesis with don't-care values:}
+Don't-care values (represented by \texttt{?}, \autoref{sec:dontCares}) denote values that are irrelevant.
+Don't-care values can be assigned to variables of any type. The compiler will pick a value for them.
+This flexibility often lets the compiler produce better circuits.
+For example, in the code \verb|Bit#(4) x = ?; if (foo(y)) x = bar(z);|,
+the compiler can choose \verb|?| to be \verb|bar(z)| and eliminate the conditional altogether,
+optimizing the whole code snippet to \verb|Bit#(4) x = bar(z);|.
 

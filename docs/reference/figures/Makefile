@@ -13,9 +13,12 @@ moves: ag_fsm.pdf
 
 #Need to name this as a file...
 ag_fsm.pdf: doc_data.txt
-	cp drawing_02.pdf ag_fsm.pdf
-	cp drawing_03.pdf ag_basicmodule.pdf
-	cp drawing_04.pdf ag_hiermodule.pdf
+	cp drawing_01.pdf ag_synthesis.pdf
+	cp drawing_03.pdf ag_fsm.pdf
+	cp drawing_04.pdf ag_basicmodule.pdf
+	cp drawing_05.pdf ag_hiermodule.pdf
+	cp drawing_06.pdf ag_badFsm.pdf
+	cp drawing_07.pdf ag_reg.pdf
 
 tidy:
 	rm -f drawing_*.pdf

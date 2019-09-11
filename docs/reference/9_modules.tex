@@ -51,66 +51,53 @@ Minispec modules have four key elements that correspond to the components of FSM
 Comparing \autoref{fig:fsm} and \autoref{fig:basicmodule}, the key difference
 is the distinction between inputs and method arguments: whereas combinational logic in FSMs
 can use any input to produce both the next state and the output,
-module methods use \emph{arguments} to produce outputs, separate from the \emph{inputs} used by rules.
-As we will see, this separation \emph{makes hierarchical composition easy} (\autoref{sec:basicmodsemantics}).
-\autoref{fig:hiermodule} shows a general module that includes submodules other than registers.
+module methods use \emph{arguments} to produce outputs, separate from the \emph{inputs} used
+by rules.
+This separation \emph{makes hierarchical composition easy} (\autoref{sec:basicmodsemantics}).
+\autoref{fig:hiermodule} shows a general module that includes
+\begin{wrapfigure}{r}{0.33\columnwidth}
+\vspace{-0.2em}
+\centering
+\includegraphics[height=1.6in]{figures/ag_badFsm.pdf}
+\caption{Example showing how composing FSMs by wiring their
+        inputs and outputs can cause a combinational cycle.}
+\label{fig:badFsm}
+\vspace{-2.5em}
+\end{wrapfigure}
+submodules other than registers.
 The separation between rule inputs and method arguments
 allows modules to instantiate and use arbitrary submodules \emph{while avoiding combinational cycles},
 i.e., ensuring that combinational logic remains acyclic.
 
-% TODO(dsm): I've gotten feedback that this doesn't explain why, but I don't think this explanation belongs here. This is the intro, and the paragraph says "as we will see"; this expla should probably be in 9.3.
-%To see why this is the case, consider a different approach where we only had inputs
-%and a single block of combinational logic produced both the outputs and the inputs for submodules.
-%Without knowing the implementation details of its submodules, a module could wire up submodule inputs and outputs
-%in a way that created a combinational cycle, e.g., by setting an input to a submodule
-%to a value that depends on one of its outputs.
-%By contrast, methods require arguments to be provided before outputs, avoiding combinational cycles.
+To see why rules and methods enable composition while avoiding combinational cycles,
+consider a different approach where we composed different FSMs directly as shown in \autoref{fig:badFsm},
+with the combinational logic in a module setting the inputs and using the outputs of its submodules
+(Verilog and other HDLs follow this approach).
+Unfortunately, this can cause combinational loops like the one in \autoref{fig:badFsm}:
+the outer module sets \verb|s.in = !s.out;| and submodule \verb|s| has a combinational path
+from \verb|in| to \verb|out|, causing a combinational feedback loop.
+We cannot prevent loops by disallowing modules from setting submodule inputs based on submodule outputs,
+because this is often necessary. For example, a module may need to check whether a submodule is ready
+to start processing a new value (e.g., through a \verb|ready| output) before giving it the value through an input.
+
+Thus, composing FSMs this way requires the specific combination of a module and its submodules to yield acyclic combinational logic.
+But this condition is brittle, requiring discipline from the designer, and it is implementation-dependent:
+changing the implementation of a submodule may introduce a combinational cycle in a previously correct circuit.
+It is thus a poor abstraction.
+
+Methods avoid these problems: with methods,
+\emph{input-to-output combinational paths in a module happen only between method arguments and method outputs}.
+Moreover, method calls \emph{force the arguments to be available before the output is avaiable}.
+Thus, a module cannot perform a sequence of method calls to its submodules that results in a cycle.
+As a result, modules can safely call methods from submodules without knowing their implementation details;
+only their interface matters.
 
 Modules need not follow a strict hierarchy, but a hierarchical design has simpler semantics.
 Thus, we first focus on modules that follow a strict hierarchy (\autoref{sec:basicmodsemantics}). %and where each module has a single rule.
 We then describe the general semantics and additional mechanisms for modules that do not follow a strict hierarchy (\autoref{sec:generalmodsemantics}).
 
-\subsection{Module syntax and elements}
-\label{sec:modulesyntax}
-\label{sec:submodules}
-
-Modules are defined using the following syntax:
-\begin{center}
-\verb|module ModType | \optStart \verb|(Type1 arg1, ..., TypeN argN)|\optEnd\verb|;    | \\
-\verb|  <submodule, method, input, rule, constant decls> | \\
-\verb|endmodule                                          |
-\end{center}
-Each definition specifies a new module \emph{type}, \verb|ModType|,
-which can then be instantiated as a submodule in other modules
-or as the top-level module.
-Modules meant to be submodules can have optional \emph{module arguments},
-\verb|arg|$_{\texttt{i}}$, with types \verb|Type|$_{\texttt{i}}$.
-These arguments can be constant values (e.g., used to set initial values),
-or other modules.
-The body of the module can declare submodules, methods, inputs, rules, and constants,
-whose syntax is explained below and shown in the examples to the right.
-
-Modules can be parametric; see \autoref{sec:parametrics} for details.
-
-\paragraph{Submodule declarations} use the syntax:
-\begin{center}
-  \verb|SubmodType submodName| \optStart \verb|(arg1, ..., argN)|\optEnd\verb|;|
-\end{center}
-where \verb|SubmodType| is the type of the submodule being instantiated,
-\verb|submodName| is the name of this specific submodule instance,
-and \verb|arg|$_{\texttt{i}}$ are the (optional) arguments to the module.
-
-
-\paragraph{Methods} 
-are nearly identical to functions:
-they specify combinational logic that produces an output
-and \emph{have no side effects}.
-They can call methods in submodules or read register values,
-but they cannot set the inputs of submodules or write to any register
-(these are side effects, which only rules can have).
-
 \begin{wrapfigure}{r}{0.32\columnwidth}
-\vspace{-2em}
+\vspace{-4em}
 \begin{mscode}
 // 8-bit counter that can be
 // incremented every cycle
@@ -152,14 +139,48 @@ module Counter16;
     end
   endrule
 endmodule
-
 \end{mscode}
-
 \vspace{-9em}
 \end{wrapfigure}
 
+\subsection{Module syntax and elements}
+\label{sec:modulesyntax}
+\label{sec:submodules}
+
+Modules are defined using the following syntax:
+\begin{center}
+\verb|module ModType | \optStart \verb|(Type1 arg1, ..., TypeN argN)|\optEnd\verb|;    | \\
+\verb|  <submodule, method, input, rule, constant decls> | \\
+\verb|endmodule                                          |
+\end{center}
+Each definition specifies a new module \emph{type}, \verb|ModType|,
+which can then be instantiated as a submodule in other modules
+or as the top-level module.
+Modules meant to be submodules can have optional \emph{module arguments},
+\verb|arg|$_{\texttt{i}}$, with types \verb|Type|$_{\texttt{i}}$.
+These arguments can be constant values (e.g., used to set initial values),
+or other modules.
+The body of the module can declare submodules, methods, inputs, rules, and constants,
+whose syntax is explained below and shown in the examples to the right.
+
+Modules can be parametric; see \autoref{sec:parametrics} for details.
+
+\paragraph{Submodule declarations} use the syntax:
+\begin{center}
+  \verb|SubmodType submodName| \optStart \verb|(arg1, ..., argN)|\optEnd\verb|;|
+\end{center}
+where \verb|SubmodType| is the type of the submodule being instantiated,
+\verb|submodName| is the name of this specific submodule instance,
+and \verb|arg|$_{\texttt{i}}$ are the (optional) arguments to the module.
 
 
+\paragraph{Methods} 
+are nearly identical to functions:
+they specify combinational logic that produces an output
+and \emph{have no side effects}.
+They can call methods in submodules or read register values,
+but they cannot set the inputs of submodules or write to any register
+(these are side effects, which only rules can have).
 Methods use a syntax nearly identical to functions:
 \begin{center}
 \verb|method RetType mname(Type1 arg1, ..., TypeN argN);| \\
@@ -203,7 +224,7 @@ and the optional \verb|defaultExpr| specifies a default value for the input.
 Inputs can be read within the module just like variables, but cannot be set.
 
 Inputs can be set within a rule of the enclosing module,
-with syntax like a normal assignment, \verb|submoduleName.inputName = expr;|.
+with syntax \verb|submoduleName.inputName = expr;|, like a normal assignment.
 If the input does not have a default value,
 the enclosing module \emph{must} set the input every cycle.
 If the input has a default value, then setting the input is optional.
@@ -216,7 +237,6 @@ times within a cycle will cause a compiler error.
 i.e., they implement side-effects.
 Specifically, rules set the values to be written in registers
 at the end of the cycle and the inputs of submodules.
-
 Rules use the following syntax:
 \begin{center}
   \verb|rule ruleName;| \\
@@ -298,13 +318,14 @@ Moreover, the effects of rules in submodules cannot be observed
 by their enclosing modules: data flows inside-out only through methods,
 and data flows outside-in through inputs and rules.
 
-\subsection{General semantics of modules (advanced)}
+\subsection{General semantics of modules (\emph{advanced})}
 \label{sec:generalmodsemantics}
 
-% TODO: Place correctly once earlier content is settled; this inset is not that important
 \begin{wrapfigure}{r}{0.32\columnwidth}
-\vspace{-4em}
+\vspace{-1.5em}
 \begin{mscode}
+// Example: non-hierarchical
+// module composition
 module FIFO;
   input Maybe#(Bit#(4))
    enqueue default = Invalid;
@@ -340,20 +361,18 @@ endmodule
 \vspace{-4em}
 \end{wrapfigure}
 
-
-
 Though the above semantics are simple, there are some cases for which strict hierarchical nesting can be too restrictive.
 For example, suppose we want to connect two modules through a FIFO (First-In-First-Out) queue:
 the producer module enqueues values into the queue, and the consumer module dequeues them.
-If we followed the hierarchical approach, the top-level module could instantiate three submodules,
+If we followed the hierarchical approach, the top-level module could instantiate three submodules:
 \texttt{producer}, \texttt{consumer}, and \texttt{queue}.
 Then, the rule in the top-level module could explicitly marshall outputs
 from \texttt{producer} into \texttt{queue} and from \texttt{queue} to \texttt{consumer}.
 But this can get cumbersome.
 Instead, we may want to have \texttt{producer} and \texttt{consumer} both directly
-interact with \texttt{queue}, \tmp{as shown in the code to the right}.
+interact with \texttt{queue}, as shown in the code to the right.
 But now \texttt{queue}'s methods and inputs are being used by two different modules,
-rather than only its enclosing module.
+rather than by only its enclosing module.
 Moreover, there may be non-trivial interactions between them.
 For example, if the producer has a value ready but the queue is empty,
 we might want to let the consumer dequeue that value on the same cycle.
@@ -379,7 +398,7 @@ They come in two flavors:
 \begin{compactitem}
 \item \verb|BypassWire#(T)| implements a wire that must be written on every cycle. It cannot be read until a rule writes to it.
 \item \verb|DWire#(T)| implements a wire with a default value. If the wire is not written in a given cycle,
-  reads to the wire return the default value. The wire has no memory: the wire ``reverts'' to the default value every cycle.
+  reads to the wire return the default value. The wire has no memory: it ``reverts'' to the default value every cycle.
 \end{compactitem}
 Wires have the same interface as registers: using the name of the wire yields its value,
 assignments with \verb|<=| write to it, only rules may write to wires, and multiple writes are not allowed.
@@ -396,24 +415,30 @@ Each sequential circuit has inputs and outputs as shown in \autoref{fig:hiermodu
 Two of these inputs are \emph{implicit} and not present in Minispec code:
 CLK, the \emph{clock signal}, and RST, the \emph{reset signal}.
 
+\begin{wrapfigure}{r}{0.33\columnwidth}
+\vspace{-2.2em}
+\centering
+\includegraphics[height=0.8in]{figures/ag_reg.pdf}
+\caption{Example synthesized register with reset and enable circuits.}
+\label{fig:reg}
+\vspace{-2.5em}
+\end{wrapfigure}
 Registers are synthesized as collections of 1-bit D flip-flops (DFFs).
 All registers use CLK as their clock.
 Registers with an initial value (i.e., \verb|Reg#(T)|) include reset circuitry
 that sets its value to the initial value when the circuit powers up.
 Because flip-flops hold an arbitrary value when first powered, this is accomplished by
 the RST signal: the RST signal is 1 for a few cycles after power-up,
-letting registers write their initial values with the circuitry \tmp{shown to the right}.
+letting registers write their initial values with the reset circuitry shown in \autoref{fig:reg}.
 Registers with no initial value (i.e., \verb|RegU#(T)|) have no reset circuitry.
 
 Registers are always written to by a single rule, but may not be updated every cycle.
 When not updated every cycle, the register includes \emph{write-enable} circuitry
-to optionally retain its old value, as \emph{shown to the right}.
-
-\todo{Circuit diagrams}
+to optionally retain its old value, as shown in \autoref{fig:reg}.
 
 Inputs without a default value are simply wires.
 Inputs with a default value translate to a multiplexer that chooses between
-the input value, if any is set, and the default value, if none is set, as shown right.
+the input value, if any is set, and the default value, if none is set.
 
 Rules are synthesized as normal combinational logic.
 They produce the values for all registers and inputs they set.

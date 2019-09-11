@@ -1,20 +1,8 @@
 \section{System Functions}
 \label{sec:systemFunctions}
 
-System functions are useful for simulation and debugging. 
-They are used to display information, read and write data,
-and terminate the simulation.
-They are not synthesizable to hardware,
-and are only used when simulating a module.
-
-All system functions begin with a dollar sign (\verb|$|).
-System functions are called like normal functions.
-System functions \emph{may only be used within module rules}, as they have side effects.
-Calls to a system function from a function or method will cause a compiler error.
-
-% FIXME(dsm): babysit
 \begin{wrapfigure}{r}{0.32\columnwidth}
-\vspace{-6em}
+\vspace{-3em}
 \begin{mscode}
 // Test harness for Counter8
 // module from Section 9
@@ -32,8 +20,19 @@ module Counter8Test;
   endrule
 endmodule
 \end{mscode}
-\vspace{-6em}
+\vspace{-4em}
 \end{wrapfigure}
+
+System functions are useful for simulation and debugging. 
+They are used to display information, read and write data,
+and terminate the simulation.
+They are not synthesizable to hardware,
+and are only used when simulating a module.
+
+All system functions begin with a dollar sign (\verb|$|).
+System functions are called like normal functions.
+System functions \emph{may only be used within module rules}, as they have side effects.
+Calls to a system function from a function or method will cause a compiler error.
 
 The two main system functions are \verb|$finish| and \verb|$display|.
 
@@ -73,6 +72,6 @@ which uses the same syntax as \texttt{\$display}.
 
 \paragraph{Other system functions:} Minispec can use other system functions from BSV,
 e.g., to read standard input or to read and write data from/to files.
-BSV system functions are described Section 12.8 of the
+BSV system functions are described in Section 12.8 of the
 \href{http://csg.csail.mit.edu/6.S078/6_S078_2012_www/resources/reference-guide.pdf}{BSV reference}.
 They are rarely needed.

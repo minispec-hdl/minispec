@@ -44,8 +44,10 @@ For more details, run \verb|ms help|.
 
 Internally, \verb|ms| uses two lower-level tools:
 \textbf{\texttt{msc}}, the Minispec compiler, which compiles functions or modules into BSV, Verilog, or a simulation executable;
-and \textbf{\texttt{synth}}, a synthesis tool for Minispec and Bluespec circuits that leverages the \verb|yosys| open-source synthesis suite
-to produce optimized gate-level implementations.
+and \textbf{\texttt{synth}}, a synthesis tool for Minispec and Bluespec circuits that leverages
+the \href{http://www.clifford.at/yosys/}{yosys} open-source synthesis suite
+and the \href{https://www.eda.ncsu.edu/wiki/FreePDK45:Contents}{FreePDK45} open-source 45nm standard cell library
+to produce optimized gate-level circuit implementations, and to analyze their delay and area.
 These tools can be used directly; run \texttt{msc -h}
 or \texttt{synth -h} for usage instructions.
 
@@ -60,7 +62,7 @@ Redefined functions or modules can be used by later code,
 but previously executed cells still use the old definitions.
 In a Minispec notebook, ``executing'' a code cell only checks the code for errors.
 To provide additional capabilities, %for evaluating, simulating, and synthesizing circuits,
-cells can include additional built-in commands called \emph{magics}.
+cells can include additional built-in commands, called \emph{magics} in Jupyter terminology.
 
 \paragraph{Magics:} Minispec notebooks provide four magics:
 \texttt{\%\%eval}, \texttt{\%\%sim}, \texttt{\%\%synth}, and \texttt{\%\%help}.

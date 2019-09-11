@@ -20,7 +20,7 @@ primarily improve efficiency and safety: by specializing code at compile time,
 parametrics reduce work done at execution time and prevent type errors.
 In Minispec, parametrics play a more important role,
 because combinational logic has limitations that programming languages do not (it is not Turing-complete).
-Thus, \emph{parametrics and compile-time specialization enables functionality that cannot be implemented with combinational logic}.
+Thus, \emph{parametrics and compile-time specialization enable functionality that cannot be implemented with combinational logic}.
 For example, in a programming language without parametrics (like C),
 we could always write a procedure that adds two numbers of arbitrary bit-widths,
 e.g., by looping over their bits and adding them one by one.
@@ -35,7 +35,7 @@ that adds numbers of arbitrary widths.
 \paragraph{Parameters} can be either \texttt{Integer}s or \texttt{type}s (including parametric types).
 
 \begin{wrapfigure}{r}{0.32\columnwidth}
-\vspace{-2em}
+\vspace{-3em}
 \begin{mscode}
 // Doubles a Bit#(n) value
 function Bit#(n+1) double
@@ -55,17 +55,14 @@ endmodule
 \vspace{-3em}
 \end{wrapfigure}
 
-
-
-
 \paragraph{Parametric definitions} follow a consistent syntax.
-Parameters are specified right after the function name or module/struct/synonym type,
+Parameters are specified after the function name or module/struct/synonym type,
 enclosed in \verb|#(...)|. Specifically:
 \begin{compactitem}
-\item Functions: \verb|function RetType fname#(PDef1, ..., PDefN) ...|.
-\item Modules: \verb|module ModType#(PDef1, ..., PDefN) ...|.
-\item Structs: \verb|typedef struct { ... } StructType#(PDef1, ..., PDefN);|.
-\item Synonyms: \verb|typedef Type NewType#(PDef1, ..., PDefN);|.
+\item Functions: \verb|function RetType fname#(PDef1, ..., PDefN) ...|
+\item Modules: \verb|module ModType#(PDef1, ..., PDefN) ...|
+\item Structs: \verb|typedef struct { ... } StructType#(PDef1, ..., PDefN);|
+\item Synonyms: \verb|typedef Type NewType#(PDef1, ..., PDefN);|
 \end{compactitem}
 and \verb|PDef|$_{\texttt{i}}$ are the \emph{parameter definitions}, each of which can be:
 \begin{compactitem}
@@ -124,9 +121,11 @@ endfunction
 
 \vspace{-0.22in}
 \hbox{\hspace{3.23in} {(a)} \hspace{3.33in} {(b)}}
+\vspace{0.15in}
 \caption{Two ripple-carry adder implementations using recursive parametric functions. (a) uses a single function,
 whereas (b) splits the base case into a separate specialized parametric function definition.}
 \label{lst:rcas}
+\vspace{-0.2in}
 \end{listing}
 
 %\vspace{-3em}
