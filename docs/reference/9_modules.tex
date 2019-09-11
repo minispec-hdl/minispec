@@ -87,7 +87,7 @@ It is thus a poor abstraction.
 
 Methods avoid these problems: with methods,
 \emph{input-to-output combinational paths in a module happen only between method arguments and method outputs}.
-Moreover, method calls \emph{force the arguments to be available before the output is avaiable}.
+Moreover, method calls \emph{force the arguments to be available before the output is available}.
 Thus, a module cannot perform a sequence of method calls to its submodules that results in a cycle.
 As a result, modules can safely call methods from submodules without knowing their implementation details;
 only their interface matters.
