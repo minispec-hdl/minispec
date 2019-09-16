@@ -94,7 +94,7 @@ def compileBsvFunction(input, args):
     writeFile(wrapperFile, wrapperData, "synthesis wrapper")
 
     print "Compiling Bluespec module"
-    run("bsc -aggressive-conditions +RTS -K16M -RTS -bdir %s -info-dir %s -p examples/processor/:%%:+ -verilog -u -g mkSynth %s " % (args.synthdir, args.synthdir, wrapperFile))
+    run("bsc -aggressive-conditions +RTS -K16M -RTS -bdir %s -info-dir %s -verilog -u -g mkSynth %s " % (args.synthdir, args.synthdir, wrapperFile))
     return targetFunc
 
 def compileBsvModule(input, args):
@@ -116,7 +116,7 @@ def compileBsvModule(input, args):
     modFile = args.file
 
     print "Compiling Bluespec module"
-    run("bsc -aggressive-conditions +RTS -K16M -RTS -bdir %s -info-dir %s -vdir %s -show-module-use -p examples/processor/:%%:+ -verilog -u -g %s %s" % (args.synthdir, args.synthdir, args.synthdir, modName, modFile),
+    run("bsc -aggressive-conditions +RTS -K16M -RTS -bdir %s -info-dir %s -vdir %s -show-module-use -verilog -u -g %s %s" % (args.synthdir, args.synthdir, args.synthdir, modName, modFile),
             "Bluespec compilation failed. Make sure your module is functionally correct.")
     return True
 
@@ -197,6 +197,7 @@ if __name__ == "__main__":
     parser.add_argument("target", help="Name of the function or module to synthesize")
     parser.add_argument("--lib", "-l", default="basic", help="Standard cell library to use (basic, extended, multisize, or full)")
     parser.add_argument("--delay", "-d", type=int, default=1, help="Target propagation delay (critical-path delay) in picoseconds. If unspecified, minimizes delay.")
+    parser.add_argument("--optLevel", "-O", type=int, default=1, help="Optimization level. -O0 disables optimization, while -O1 performs fixed logic optimization passes.")
     parser.add_argument("--synthdir", "-s", default="synthDir", help="Folder for intermediate synthesis files")
     parser.add_argument("--view", "-v", default=False, action="store_true", help="Visualize resulting circuit (not available with full standard cell library)")
     parser.add_argument("--names", "-n", default=False, action="store_true", help="Try to recover net names for gate outputs in the critical path (experimental, takes longer)")
@@ -281,39 +282,36 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Produce synthesis scripts
-    # FIXME: Document default optimization options...
-    #abcBaseData = "strash;ifraig;map -D $DELAY -B 0.1;cleanup;$BUFFER;upsize -D $DELAY;dnsize -D $DELAY;stime -p;"
-    #abcBaseData = "strash;"
-    #abcBaseData = "strash;ifraig;balance;refactor;rewrite;balance;refactor -z;balance;rewrite -z;balance;strash;refactor;balance;balance;balance -s;balance -x;balance;rewrite;balance;refactor -z;balance;rewrite -z;balance;strash;if -g;" #balance;refactor;rewrite;strash;if -x;strash;balance;"
-    #abcBaseData = "strash;ifraig;balance;refactor;rewrite;if -x;"
-
-    #alias resyn       "b; rw; rwz; b; rwz; b"
-    #alias resyn2      "b; rw; rf; b; rw; rwz; b; rfz; rwz; b"
+    # ABC common resyn optimization aliases:
     resyn = "balance;rewrite;rewrite -z;balance;rewrite -z;balance;"
     resyn2 = "balance;rewrite;refactor;balance;rewrite;rewrite -z;balance;refactor -z;rewrite -z;balance;"
     resyn3 = "balance; resub; resub -K 6; balance; resub -z; resub -z -K 6; balance; resub -z -K 5; balance;"
-    #abcBaseData = "strash;ifraig;" + resyn + "if -x;" + resyn2 + "if -x;" + resyn2 + "if -x;" + resyn2
-    #recadd3 = "strash; rec_add3; balance; rec_add3; dc2; rec_add3; if -K 8; bidec; strash; rec_add3; dc2; rec_add3; if -g -K 6; strash; rec_add3;"
-    #abcBaseData = "strash;ifraig;" + recadd3 + resyn + "strash;if -x;" + resyn2 + "if -x;" + resyn2
-    # choice2
-    #abcBaseData = "strash;" + resyn + "fraig_store;" + resyn2 + "fraig_store;" + resyn2 + "fraig_store;fraig_restore;"
+    recadd3 = "strash; rec_add3; balance; rec_add3; dc2; rec_add3; if -K 8; bidec; strash; rec_add3; dc2; rec_add3; if -g -K 6; strash; rec_add3;"
 
-    abcBaseData = "strash;" + resyn + "if -x;" + resyn2 + "if -g;" + resyn2 + "if -x;" + resyn2 + "ifraig;"
-    #abcBaseData = "strash;" + resyn + resyn2 + "ifraig;"
-    #abcBaseData = "strash;ifraig;"
+    if args.optLevel == 0:
+        # -O0: No optimization other than balancing XOR trees (balance -x). 
+        abcBaseData = "strash;balance -x;ifraig;"
+    elif args.optLevel == 1:
+        # -O1: Gentle optimization, balances XOR trees well, generally outperforms -O0,
+        # does not change algorithmic tradeoffs (e.g., won't turn a non-trivial chain
+        # like in a ripple-carry adder into a tree by doing parallel prefix sum).
+        #
+        # NOTE: balance -x added at middle-end to avoid imbalanced XOR trees (try a
+        # 256-input XOR without it...) and at the same time leave enough room for
+        # later passes to optimize if balance -x doesn't do so well (balance -x last
+        # sometimes produces non-negligible diffs in large designs, e.g., +15-20ns in
+        # a pipelined RISC-V processor with a ~250ns critical path).
+        abcBaseData = "strash;" + resyn + "if -x;" + resyn2 + "if -x;balance -x;" + resyn2 + "ifraig;"
+    else:
+        print "ERROR: Optimization level can be 0 or 1 only, specified invalid value %d" % args.optLevel
+        sys.exit(-1)
 
-    #abcBaseData = "strash;" + resyn + "if -x;" + resyn2 + "if -x;" + resyn3 + "ifraig;"
-    abcBaseData = "strash;" + resyn + "if -x;" + resyn2 + "if -x;" + resyn2 + "ifraig;"
-    
-    abcBaseData = "strash;fraig;refactor;balance;rewrite;refactor;balance;rewrite -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;if -g -K 8;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;if -g -K 12;refactor;balance;rewrite;rewrite -z;refactor -z;balance;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;if -g -K 8;refactor;balance;rewrite;rewrite -z;refactor -z;balance;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;if -g -K 8;refactor;balance;rewrite;if -x -K 12;rewrite -z;refactor -z;balance;if -y -K 6;refactor;balance;rewrite;rewrite -z;refactor -z;balance;" #+ resyn + "if -x -K 16;" + resyn2
-   
-
-    baseOpt = resyn + "if -x;" + resyn2 + "if -g;" + resyn2 + "if -x;" + resyn2 + "fraig;"
-
-    #abcBaseData = "strash;" + baseOpt  + "scorr;dretime;retime -D $DELAY;" #+ baseOpt
+    # -O2 candidate: More serious optimization, obscutres algorithmic tradeoffs; apply with care
+    # NOTE: If we ever do -O2, we should do an iterative optimization process, trying resyn etc. and building an optimization string over time,
+    # optimizing our way to some local minimum. Otherwise, these more complex sequences of passes have really odd behaviors (e.g., being worse than simple for some inputs, etc.)
+    #abcBaseData = "strash;fraig;refactor;balance;rewrite;refactor;balance;rewrite -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;if -g -K 8;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;if -g -K 12;refactor;balance;rewrite;rewrite -z;refactor -z;balance;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;if -g -K 8;refactor;balance;rewrite;rewrite -z;refactor -z;balance;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;if -g -K 8;refactor;balance;rewrite;if -x -K 12;rewrite -z;refactor -z;balance;if -y -K 6;refactor;balance;rewrite;rewrite -z;refactor -z;balance;" #+ resyn + "if -x -K 16;" + resyn2
 
     abcBaseData += "map -D $DELAY -B 0.1;cleanup;$BUFFER;upsize -D $DELAY;dnsize -D $DELAY;stime -p;"
-    #abcBaseData = "strash; ifraig; strash;" + resyn + "if -x;" + resyn2 + "if -x;" + resyn2 + "&get -n; &dch -f; &nf -D $DELAY; &put; buffer; upsize -D $DELAY; dnsize -D $DELAY; stime -p"
     abcSeqBaseData = "strash;fraig;scorr;dretime;retime -D $DELAY;map -D $DELAY -B 0.1;cleanup;"
 
     # Find all files to read
@@ -343,7 +341,7 @@ if __name__ == "__main__":
         POST = postCmds
     )
 
-    print "Synthesizing circuit with std cell library = %s, target delay = %d ps" % (args.lib, args.delay)
+    print "Synthesizing circuit with std cell library = %s, O%d, target delay = %d ps" % (args.lib, args.optLevel, args.delay)
 
     # Buffer insertion is not delay-aware and finicky, so synthesize the circuit using a few settings and pick the best
     bufferCfgs = [("nb", ""), ("b", "buffer"), ("b50", "buffer -N 50"), ("b2K", "buffer -N 2000")]
