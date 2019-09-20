@@ -1362,17 +1362,9 @@ class Elaborator : public MinispecBaseListener {
             };
  
             if (id.find("mk") == 0) err("begins with " + hlColored("'mk'"));
-            if (id.find("___") != -1ul) err("contains " + hlColored("'___'"));
+            if (id.find("___input") != -1ul) err("contains " + hlColored("'___input'"));
             if (svKeywords.count(id)) err("is a SystemVerilog keyword");
             if (bsvKeywords.count(id)) err("is a Bluespec (BSV) keyword");
-        }
-
-        void exitUpperCaseIdentifier(MinispecParser::UpperCaseIdentifierContext* ctx) override {
-            auto id = ctx->getText();
-            if (id.find("___") != -1ul) {
-                report(BasicError(ctx, "uppercase identifier " + quote(ctx) + 
-                            " contains " + hlColored("'___'") + ", which is forbidden"));
-            }
         }
 
         void exitPackageDef(MinispecParser::PackageDefContext* ctx) override {
