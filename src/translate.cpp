@@ -1143,6 +1143,13 @@ class Elaborator : public MinispecBaseListener {
             }
             tc->emitLine("endinterface\n");
 
+            // Emit interface and module as separate entities. bsc reports some
+            // errors (e.g., conflicting declarations) at the beginning of the
+            // module rather than the name. This way, we can catch the exact
+            // location.
+            tc->emitEnd();
+            tc->emitStart(ctx);
+
             // Then, emit the module, following standard BSV conventions for naming
             if (ctx->moduleId()->paramFormals()) {
                 auto pu = getValue(ctx->moduleId()).as<ParametricUsePtr>();
@@ -1448,8 +1455,6 @@ std::string getPrelude() {
 SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*> parsedTrees, const std::string& topLevel) {
     // Initial validation of topLevel arg
     auto topLevelParametric = validateTopLevel(topLevel);
-    // TODO: Compile functions as well
-    //if (topLevelParametric && islower(topLevelParametric->name[0])) error("compiling functions not currently supported");
 
     // Do an initial pass to capture all type and module names. This advance visibility
     // is needed because we need to know whether a parametric type use maps to
@@ -1597,16 +1602,20 @@ SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*> p
             tc.emitEnd(paramInfo);
         }
     }
-
-    exitIfErrors();
-  
+    
     std::string topModule = "";
     if (topLevelParametric) topModule = "mk" + topLevelParametric->str();
 
     // Top-level parametric modules with names containing #() break both bsc
     // -sim (the generated C++ files have the unescaped raw name all over) and
     // produce invalid Verilog output. So produce a wrapper module.
-    if (topLevelParametric && !topLevelParametric->params.empty()/* && isupper(topLevelParametric->name[0])*/) {
+    if (topLevelParametric && !topLevelParametric->params.empty()) {
+        if (!elab.isParametricEmitted(*topLevelParametric)) {
+            std::string msg = errorColored("error:") + " cannot find top-level parametric " +
+                errorColored("'" + topLevelParametric->str() + "'");
+            reportErr(msg, "", nullptr);
+        }
+        
         ParametricUse ifcPu = *topLevelParametric;
         if (!isupper(ifcPu.name[0])) {
             ifcPu.name[0] = toupper(ifcPu.name[0]);
@@ -1620,5 +1629,6 @@ SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*> p
         topModule = "mkTopLevel___";
     }
 
+    exitIfErrors();
     return tc.getSourceMap(topModule);
 }

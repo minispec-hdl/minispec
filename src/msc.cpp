@@ -23,7 +23,7 @@ typedef std::function<std::string(uint32_t, uint32_t)> TranslateLocFn;
 typedef std::function<std::string(uint32_t, uint32_t, const std::vector<std::string>&)> ContextStrFn;
 typedef std::function<tree::ParseTree*(uint32_t, uint32_t)> FindFn;
 
-void reportBluespecOutput(std::string str, const SourceMap& sm) {
+void reportBluespecOutput(std::string str, const SourceMap& sm, const std::string& topLevel) {
     typedef std::regex_iterator<std::string::const_iterator> regex_it;
     const regex_it rend;
 
@@ -88,7 +88,14 @@ void reportBluespecOutput(std::string str, const SourceMap& sm) {
         std::string msg = m[2];
         std::smatch hdrMatch;
         if (!std::regex_search(msg, hdrMatch, hdrRegex)) {
-            reportUnknownMsg(isError, msg);
+            // Special-case not-found top-level error
+            if (msg.find("Command line:") >= 0 && msg.find("Unbound variable `mk")) {
+                bool isModule = isupper(topLevel[0]);
+                msg = errorColored("error:") + " cannot find top-level " + (isModule? "module" : "function") + " " + errorColored("'" + topLevel + "'");
+                reportMsg(isError, msg);
+            } else {
+                reportUnknownMsg(isError, msg);
+            }
             continue;
         }
         std::string file = hdrMatch[1];
@@ -115,8 +122,11 @@ void reportBluespecOutput(std::string str, const SourceMap& sm) {
         std::smatch elemMatch;
         while (std::regex_search(body, elemMatch, elemRegex)) {
             std::string elem = elemMatch[1];
-            elems.push_back(elem);
-            replace(body, elemMatch[0], errorColored("'" + elem + "'"));
+            // Translate all module constructors back to the module name
+            if (elem.size() > 2 && elem.find("mk") == 0 && isupper(elem[2]))
+                elem = elem.substr(2);
+	    elems.push_back(elem);
+	    replace(body, elemMatch[0], errorColored("'" + elem + "'"));
         }
 
         // Special-case a few codes; these rewrite body on success, o/w they fall through the default code
@@ -151,6 +161,15 @@ void reportBluespecOutput(std::string str, const SourceMap& sm) {
                     body = "cannot convert literal to type " + hlColored(type);
                 }
             }
+	} else if (code == "T0003") {
+	    // I see these only on mistyped literals, but unbound constructor
+	    // is such a general message that who knows where else it may show
+	    // up. So leave the translated error general.
+	    replace(body, "unbound constructor", "undefined literal, type, or module");
+        } else if (code == "T0004") {
+	    replace(body, "unbound variable", "undefined variable or function");
+	} else if (code == "T0007") {
+	    replace(body, "unbound type constructor", "undefined type or module");
         } else if (code == "G0005") {
             std::regex blockedRegex("The assertion `fire_when_enabled' failed for rule `(.*?)' because it is blocked by rule (.*?) in the scheduler");
             std::smatch match;
@@ -333,7 +352,7 @@ int main(int argc, const char* argv[]) {
     auto runBscCmd = [&](const std::string& cmd) {
         //std::cout << cmd << "\n";
         auto compileRes = run(cmd);
-        reportBluespecOutput(compileRes.output, sm);
+        reportBluespecOutput(compileRes.output, sm, topLevel);
         exitIfErrors();
 	if (compileRes.exitCode != 0) {
             // If we didn't parse any error but bsc failed, this is typically
