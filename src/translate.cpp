@@ -514,6 +514,11 @@ void registerElabStep(ElabStep es, uint64_t depth = 0) {
     }
 }
 
+// Keywords to check against. bsc checks against SystemVerilog keywords, but we'd get epic error messages if a BSV keyword was used as an identifier in Minispec...
+const std::unordered_set<std::string> svKeywords = {"alias", "always", "always_comb", "always_ff", "always_latch", "and", "assert", "assert_strobe", "assign", "assume", "automatic", "before", "begin", "bind", "bins", "binsof", "break", "buf", "bufif0", "bufif1", "byte", "case", "casex", "casez", "cell", "chandle", "class", "clocking", "cmos", "config", "const", "constraint", "context", "continue", "cover", "covergroup", "coverpoint", "cross", "deassign", "default", "defparam", "design", "disable", "dist", "do", "edge", "else", "end", "endcase", "endclass", "endclocking", "endconfig", "endfunction", "endgenerate", "endgroup", "endinterface", "endmodule", "endpackage", "endprimitive", "endprogram", "endproperty", "endspecify", "endsequence", "endtable", "endtask", "enum", "event", "expect", "export", "extends", "extern", "final", "first_match", "for", "force", "foreach", "forever", "fork", "forkjoin", "function", "generate", "genvar", "highz0", "highz1", "if", "iff", "ifnone", "ignore_bins", "illegal_bins", "import", "incdir", "include", "initial", "inout", "input", "inside", "instance", "int", "integer", "interface", "intersect", "join", "join_any", "join_none", "large", "liblist", "library", "local", "localparam", "logic", "longint", "macromodule", "matches", "medium", "modport", "module", "nand", "negedge", "new", "nmos", "nor", "noshowcancelled", "not", "notif0", "notif1", "null", "or", "output", "package", "packed", "parameter", "pmos", "posedge", "primitive", "priority", "program", "property", "protected", "pull0", "pull1", "pulldown", "pullup", "pulsestyle_onevent", "pulsestyle_ondetect", "pure", "rand", "randc", "randcase", "randsequence", "rcmos", "real", "realtime", "ref", "reg", "release", "repeat", "return", "rnmos", "rpmos", "rtran", "rtranif0", "rtranif1", "scalared", "sequence", "shortint", "shortreal", "showcancelled", "signed", "small", "solve", "specify", "specparam", "static", "string", "strong0", "strong1", "struct", "super", "supply0", "supply1", "table", "tagged", "task", "this", "throughout", "time", "timeprecision", "timeunit", "tran", "tranif0", "tranif1", "tri", "tri0", "tri1", "triand", "trior", "trireg", "type", "typedef", "union", "unique", "unsigned", "use", "var", "vectored", "virtual", "void", "wait", "wait_order", "wand", "weak0", "weak1", "while", "wildcard", "wire", "with", "within", "wor", "xnor", "xor"};
+
+const std::unordered_set<std::string> bsvKeywords = {"action", "endaction", "actionvalue", "endactionvalue", "ancestor", "deriving", "endinstance", "let", "match", "method", "endmethod", "par", "endpar", "powered_by", "provisos", "rule", "endrule", "rules", "endrules", "seq", "endseq", "schedule", "typeclass", "endtypeclass", "clock", "reset", "noreset", "no_reset", "valueof", "valueOf", "clocked_by", "reset_by", "default_clock", "default_reset", "output_clock", "output_reset", "input_clock", "input_reset", "same_family"};
+
 class ElaboratorParseTreeWalker : public tree::ParseTreeWalker {
     public:
         virtual void walk(tree::ParseTreeListener* listener, tree::ParseTree* t) const override {
@@ -1346,6 +1351,28 @@ class Elaborator : public MinispecBaseListener {
             }
             tc->emitEnd();
             setValue(ctx, tc);
+        }
+
+        // Forbid some identifiers to avoid conflicts
+        void exitLowerCaseIdentifier(MinispecParser::LowerCaseIdentifierContext* ctx) override {
+            auto id = ctx->getText();
+            auto err = [&](std::string e) {
+                report(BasicError(ctx, "lowercase identifier " + quote(ctx) + 
+                            " " + e + ", which is forbidden"));
+            };
+ 
+            if (id.find("mk") == 0) err("begins with " + hlColored("'mk'"));
+            if (id.find("___") != -1ul) err("contains " + hlColored("'___'"));
+            if (svKeywords.count(id)) err("is a SystemVerilog keyword");
+            if (bsvKeywords.count(id)) err("is a Bluespec (BSV) keyword");
+        }
+
+        void exitUpperCaseIdentifier(MinispecParser::UpperCaseIdentifierContext* ctx) override {
+            auto id = ctx->getText();
+            if (id.find("___") != -1ul) {
+                report(BasicError(ctx, "uppercase identifier " + quote(ctx) + 
+                            " contains " + hlColored("'___'") + ", which is forbidden"));
+            }
         }
 
         void exitPackageDef(MinispecParser::PackageDefContext* ctx) override {
