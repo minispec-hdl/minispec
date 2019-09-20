@@ -196,6 +196,18 @@ endmodule''' % (expr, expr)
                         cur = m.end() + 1
                     if cur < len(text):
                         self._defaultDisplay(name, text[cur:])
+                # Parametric functions/modules must be emitted escaped to the command line
+                # To do this (even with nested parametrics), we leverage that
+                # (1) parameters start with # and end with ),
+                # (2) no other synth argument uses these characters, and
+                # (3) it suffices to escape the parametric string
+                # We also check whether the sequence has been escaped already, and unescape it
+                if args.find("#") > -1 and args.rfind(")") > args.find("#"):
+                    args = args.replace('"', '').replace("'", "")
+                    (a1, a2, a3) = args.partition("#")
+                    (a3, a4, a5) = a3.rpartition(")")
+                    args = a1.rstrip() + "'#" + a3.replace(" ", "") + ")' " + a5
+
                 cmd = "(cd %s && synth %s %s)" % (tmpDir, topFile, args)
                 if self.runCmd(cmd, display=synthDisplay): return errMsg
             elif cmd == "help":
