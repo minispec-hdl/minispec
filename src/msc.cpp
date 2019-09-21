@@ -371,6 +371,7 @@ int main(int argc, const char* argv[]) {
         replace(outName, "(", "");
         replace(outName, ")", "");
         replace(outName, " ", "");
+        replace(outName, "'", "");
         replace(outName, "\t", "");
     }
     bool typechecked = false;

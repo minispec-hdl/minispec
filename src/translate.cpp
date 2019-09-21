@@ -351,6 +351,29 @@ class IntegerContext {
         }
 };
 
+// Integer parsing facilities
+bool isUnsizedLiteral(MinispecParser::IntLiteralContext *ctx) {
+    auto s = ctx->getText();
+    size_t quotePos = s.find("'");
+    return quotePos == -1ul || quotePos == 0;
+}
+
+int64_t parseUnsizedLiteral(MinispecParser::IntLiteralContext *ctx) {
+    assert(isUnsizedLiteral(ctx));
+    auto s = ctx->getText();
+    replace(s, "_", "");
+    if (s.find("'") == -1ul) return std::stol(s); // decimal
+    assert(s.size() >= 3);
+    char base = s[1];
+    auto num = s.substr(2);
+    switch (base) {
+        case 'd': return std::stol(num);
+        case 'b': return std::stol(num, nullptr, 2);
+        case 'h': return std::stol(num, nullptr, 16);
+        default: panic("unsized int literal with unknown base, grammar must be outdated");
+    }
+}
+
 // Helper for post-parse error messages
 std::string quote(ParserRuleContext* ctx) {
     assert(ctx);
@@ -946,12 +969,10 @@ class Elaborator : public MinispecBaseListener {
         }
 
         // Bottom-up integer expression elaboration
-        void exitIntLiteral(MinispecParser::IntLiteralContext *ctx) override {
-            // FIXME: Parse numbers in other bases
-            std::string lit = ctx->getText();
-            if (lit.find("'") != std::string::npos) return;
-            int64_t res = atol(lit.c_str());
-            setValue(ctx, res);
+        void exitIntLiteral(MinispecParser::IntLiteralContext* ctx) override {
+            if (isUnsizedLiteral(ctx)) {
+                setValue(ctx, parseUnsizedLiteral(ctx));
+            }
         }
 
         void exitBinopExpr(MinispecParser::BinopExprContext* ctx) override {
@@ -1420,19 +1441,30 @@ static ParametricUsePtr createTopLevelParametricUsePtr(const std::string& name, 
     auto res = std::make_shared<ParametricUse>();
     res->name = name;
     res->escape = false;
+
+    // We can only take literals, but the grammar allows expressions,
+    // so we need to go dooown the hierarchy. This returns nullptr at
+    // any point where the traversal fails, no point in giving more info
+    auto intParamToIntLiteral = [](MinispecParser::ExpressionContext* intParamCtx) -> MinispecParser::IntLiteralContext* {
+        auto opCtx = dynamic_cast<MinispecParser::OperatorExprContext*>(intParamCtx);
+        if (!opCtx) return nullptr;
+        auto binopCtx = opCtx->binopExpr();
+        if (!binopCtx) return nullptr;
+        auto unopCtx = binopCtx->unopExpr();
+        if (!unopCtx) return nullptr;
+        auto primCtx = unopCtx->exprPrimary();
+        if (!primCtx) return nullptr;
+        return dynamic_cast<MinispecParser::IntLiteralContext*>(primCtx);
+    };
+
     if (params) {
         for (auto p : params->param()) {
             if (p->intParam) {
-                auto ipStr = p->getText();
-                int64_t val = 0;
-                try {
-                    // TODO: Parse more bases...
-                    val = std::stol(ipStr);
-                } catch (...) {
-                    error((errHdr + "could not parse integer param " +
-                                errorColored("'" + ipStr + "'")).c_str());
-                }
-                res->params.push_back(val);
+                auto ipStr = p->intParam->getText();
+                auto litCtx = intParamToIntLiteral(p->intParam);
+                if (!litCtx) error("%s", (errHdr + errorColored("'" + ipStr + "'") + " is not an integer literal").c_str());
+                if (!isUnsizedLiteral(litCtx)) error("%s", (errHdr + errorColored("'" + ipStr + "'") + " is a sized integer literal (must be unsized)").c_str());
+                res->params.push_back(parseUnsizedLiteral(litCtx));
             } else {
                 auto pu = createTopLevelParametricUsePtr(p->type()->name->getText(), p->type()->params(), errHdr);
                 res->params.push_back(pu);
@@ -1453,11 +1485,11 @@ static ParametricUsePtr validateTopLevel(const std::string& topLevel) {
         MinispecParser parser(&tokenStream);
         parser.setErrorHandler(std::make_shared<BailErrorStrategy>());
         auto topLevelExpr = dynamic_cast<MinispecParser::VarExprContext*>(parser.exprPrimary());
-        if (!topLevelExpr) error((errHdr + "not a module or function id").c_str());
+        if (!topLevelExpr) error("%s", (errHdr + "not a module or function id").c_str());
         return createTopLevelParametricUsePtr(topLevelExpr->var->getText(),
                 topLevelExpr->params(), errHdr);
     } catch (ParseCancellationException& p) {
-        error((errHdr + "not a module or function id").c_str());
+        error("%s", (errHdr + "not a module or function id").c_str());
     }
 }
 

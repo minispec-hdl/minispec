@@ -14,7 +14,8 @@ upperCaseIdentifier : UpperCaseIdentifier ;
 identifier : lowerCaseIdentifier | upperCaseIdentifier ;
 anyIdentifier : lowerCaseIdentifier | upperCaseIdentifier | DollarIdentifier ;
 
-IntLiteral : ([1-9][0-9]*)?('\''[hdob]?)?[0-9a-fA-F_]+ ;
+// NOTE: This is now a precise regex (does not allow invalid int literals) and octal is not allowed
+IntLiteral : ([0-9_]+) | (([1-9][0-9]*)?('\'h'[0-9a-fA-F_]+ | '\'d'[0-9_]+ | '\'b'[0-1_]+)) ;
 StringLiteral : '"' (~ [\f\n\r\t"])* '"' ;
 
 WhiteSpace : [ \f\n\r\t]+ -> channel (3) ;
