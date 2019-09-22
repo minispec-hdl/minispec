@@ -9,7 +9,7 @@ To install this file:
 
 We recommend you also add the following lines to your .nanorc:
 ```
-set autorindent
+set autoindent
 set tabsize 4
-set tabstospace
+set tabstospaces
 ```
