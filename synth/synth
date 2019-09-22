@@ -290,7 +290,7 @@ if __name__ == "__main__":
 
     if args.optLevel == 0:
         # -O0: No optimization other than balancing XOR trees (balance -x). 
-        abcBaseData = "strash;balance -x;ifraig;"
+        optCfgs = [("ox", "balance -x")]
     elif args.optLevel == 1:
         # -O1: Gentle optimization, balances XOR trees well, generally outperforms -O0,
         # does not change algorithmic tradeoffs (e.g., won't turn a non-trivial chain
@@ -301,18 +301,24 @@ if __name__ == "__main__":
         # later passes to optimize if balance -x doesn't do so well (balance -x last
         # sometimes produces non-negligible diffs in large designs, e.g., +15-20ns in
         # a pipelined RISC-V processor with a ~250ns critical path).
-        abcBaseData = "strash;" + resyn + "if -x;" + resyn2 + "if -x;balance -x;" + resyn2 + "ifraig;"
+        #
+        # Since -O0 params occasionally outperform -O1 (esp. on small circuits), include both
+        optCfgs = [("ox", "balance -x"), ("ob", resyn + "if -x;" + resyn2 + "if -x;balance -x;" + resyn2)]
     else:
         print "ERROR: Optimization level can be 0 or 1 only, specified invalid value %d" % args.optLevel
         sys.exit(-1)
 
-    # -O2 candidate: More serious optimization, obscutres algorithmic tradeoffs; apply with care
+    # -O2 candidate: More serious optimization, obscures algorithmic tradeoffs; apply with care
     # NOTE: If we ever do -O2, we should do an iterative optimization process, trying resyn etc. and building an optimization string over time,
     # optimizing our way to some local minimum. Otherwise, these more complex sequences of passes have really odd behaviors (e.g., being worse than simple for some inputs, etc.)
     #abcBaseData = "strash;fraig;refactor;balance;rewrite;refactor;balance;rewrite -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;if -g -K 8;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;if -g -K 12;refactor;balance;rewrite;rewrite -z;refactor -z;balance;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;if -g -K 8;refactor;balance;rewrite;rewrite -z;refactor -z;balance;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;if -g -K 8;refactor;balance;rewrite;if -x -K 12;rewrite -z;refactor -z;balance;if -y -K 6;refactor;balance;rewrite;rewrite -z;refactor -z;balance;" #+ resyn + "if -x -K 16;" + resyn2
 
-    abcBaseData += "map -D $DELAY -B 0.1;cleanup;$BUFFER;upsize -D $DELAY;dnsize -D $DELAY;stime -p;"
-    abcSeqBaseData = "strash;fraig;scorr;dretime;retime -D $DELAY;map -D $DELAY -B 0.1;cleanup;"
+    abcBaseData = "strash;$OPT;ifraig;map -D $DELAY -B 0.1;cleanup;$BUFFER;upsize -D $DELAY;dnsize -D $DELAY;stime -p;"
+    # NOTE: Removed dretime as it produced worse QoR; using retime -M4 which is just delay-optimal
+    # TODO: Try retiming after mapping/$BUFFER/sizing. It seems to produce slightly better results,
+    # however the 2nd call to ABC needs absolutely no buffers, so you need to follow a late retime
+    # with yet another map (or strash + map).
+    abcSeqBaseData = "strash;$OPT;fraig;scorr;retime -D $DELAY -M 4;map -D $DELAY -B 0.1;cleanup;"
 
     # Find all files to read
     readVerilogCmds = ["read_verilog " + os.path.join(args.synthdir, "*.v")]
@@ -344,11 +350,11 @@ if __name__ == "__main__":
     print "Synthesizing circuit with std cell library = %s, O%d, target delay = %d ps" % (args.lib, args.optLevel, args.delay)
 
     # Buffer insertion is not delay-aware and finicky, so synthesize the circuit using a few settings and pick the best
-    bufferCfgs = [("nb", ""), ("b", "buffer"), ("b50", "buffer -N 50"), ("b2K", "buffer -N 2000")]
+    bufferCfgs = [("nb", ""), ("b", "buffer"), ("b50", "buffer -N 50")]
     yosysOutFile = lambda outDir: os.path.join(outDir, "yosys.out")
 
     # We run all yosys instances in parallel, as they take little memory
-    def runYosys_start(outDir, bufferCmd):
+    def runYosys_start(outDir, optCmd, bufferCmd):
         run("mkdir -p " + outDir)
 
         yosysFile = os.path.join(outDir, "synth.ys")
@@ -360,6 +366,7 @@ if __name__ == "__main__":
         def genAbcScript(baseData, filename):
             abcFile = os.path.join(outDir, filename)
             abcData = string.Template(baseData).substitute(
+                OPT = optCmd,
                 BUFFER = bufferCmd,
                 DELAY = str(args.delay),
                 OUTDIR = outDir,
@@ -394,7 +401,7 @@ if __name__ == "__main__":
 
         # 1. Get the input blif file (by crashing ABC on purpose, so yosys
         # doesn't delete it... geeeez)
-        (p, _) = runYosys_start(os.path.join(args.synthdir, "yosys_input"), "thiswillfail;")
+        (p, _) = runYosys_start(os.path.join(args.synthdir, "yosys_input"), "", "thiswillfail;")
         errMsg = run_geterr(p)
         tmpOutBlif = re.search("Can't open ABC output file `(.*?)'", errMsg).group(1).strip()
         tmpInBlif = tmpOutBlif.replace("output.blif", "input.blif")
@@ -411,9 +418,10 @@ if __name__ == "__main__":
         abcBaseData += "write_blif $OUTDIR/postmap.blif;move_names %s; dress %s;write_blif $OUTDIR/postmap-dressed.blif;empty;read_blif $OUTDIR/postmap.blif;" % (inBlifFile,inBlifFile)
 
     procs = []
-    for (suffix, bufferCmd) in bufferCfgs:
-        outDir = os.path.join(args.synthdir, "yosys_" + suffix)
-        procs.append(runYosys_start(outDir, bufferCmd))
+    for (optSuffix, optCmd) in optCfgs:
+        for (bufferSuffix, bufferCmd) in bufferCfgs:
+            outDir = os.path.join(args.synthdir, "yosys_%s_%s" % (optSuffix, bufferSuffix))
+            procs.append(runYosys_start(outDir, optCmd, bufferCmd))
 
     results = []
     for p in procs:
