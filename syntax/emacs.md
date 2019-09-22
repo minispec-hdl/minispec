@@ -24,4 +24,4 @@ cp $BLUESPECDIR/../util/emacs/*.el ~/.emacs.d/bsv/
 (setq auto-mode-alist (cons  '("\\.ms\\'" . bsv-mode) auto-mode-alist))
 ```
 
-If you already have vim set up with BSV syntax, you only need to add the last line of step 3.
+If you already have emacs set up with BSV syntax, you only need to add the last line of step 3.
