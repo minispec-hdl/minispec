@@ -1,0 +1,41 @@
+## Syntax highlighting for Minispec
+## Author: Daniel Sanchez
+## Based on c.nanorc
+syntax "minispec" "\.ms?$"
+
+# Most keywords
+color green "\<(begin|bsvimport|case|default|else|end|endcase|endfunction|endmethod|endmodule|endrule|enum|for|function|if|import|input|let|method|module|return|rule|struct|type|typedef)\>"
+
+# Bool/Maybe literals
+color brightred "\<(True|False|Valid|Invalid)\>"
+
+# Numbers
+color brightblue "\<([0-9]+)'h[0-9a-fA-F_]+\>"
+color brightblue "\<([0-9]+)'b[01_]+\>"
+color brightblue "\<([0-9]+)'d[0-9_]+\>"
+color brightblue "\<[0-9_]+\>"
+
+# System functions
+color cyan "\<\$\w+\>"
+
+# dsm: Uncomment the following if you want more color; I think they look too busy with nano's limited coloring options
+# Types
+#color magenta "\<[A-Z]\w*\>"
+# Punctuation
+#color brightwhite "(#|\{|\}|\[|\]|\(|\))"
+
+## dsm: As-is from c.nanorc
+## String highlighting.  You will in general want your comments and
+## strings to come last, because syntax highlighting rules will be
+## applied in the order they are read in.
+color brightred "<[^= 	]*>" ""(\\.|[^"])*""
+##
+## This string is VERY resource intensive!
+color brightred start=""(\\.|[^"])*\\[[:space:]]*$" end="^(\\.|[^"])*""
+
+## Comment highlighting
+color brightblue "//.*"
+color brightblue start="/\*" end="\*/"
+
+## Trailing whitespace
+color ,green "[[:space:]]+$"
