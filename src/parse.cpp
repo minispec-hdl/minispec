@@ -198,6 +198,17 @@ class ErrorStrategy : public DefaultErrorStrategy {
         }
 
         void reportNoViableAlternative(Parser *recognizer, const NoViableAltException &e) override {
+            // NOTE(dsm): At some point I experimented with having the following two lines in here:
+            ////if (inErrorRecoveryMode(recognizer)) return;
+            ////beginErrorCondition(recognizer);
+            // The reason is some test case was producing a better error, as NoViableAlternative
+            // errors are sometimes quite obtuse. But if you look at the antlr code, reportError()
+            // calls this, and reportError already has these two lines at the top. So uncommenting
+            // these lines would have the effect of silencing all NoViableAlternative errors.
+            // At some point, we should switch to a parser error reporting strategy that gathers
+            // all parser errors and then prints only the more legible types (e.g., a missing token
+            // instead of a NoViableAlt error).
+
             TokenStream *tokens = recognizer->getTokenStream();
             std::string input;
             if (tokens != nullptr) {
