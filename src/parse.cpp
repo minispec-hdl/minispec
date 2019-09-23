@@ -125,8 +125,17 @@ class ErrorListener : public BaseErrorListener {
                 errorColored(lineStr.substr(symbolStart, symbolLen)) <<
                 lineStr.substr(symbolEnd) << "\n";
 
+#if 0
             // Until we refine recovery, bail on first error; others are often confusing
             throw ParseCancellationException();
+#else
+            // Due to an open bug in ANTLR, this throw causes a SIGSEGV
+            // if the exception comes from reportNoViableAlternative
+            // Bug: https://github.com/antlr/antlr4/issues/2550
+            // Open PR: https://github.com/antlr/antlr4/pull/2501
+            // Instead, for now exit directly
+            error("could not parse file %s", recognizer->getInputStream()->getSourceName().c_str());
+#endif
         }
 
     private:
@@ -295,6 +304,8 @@ ParsedFile* parseFile(const std::string& fileName) {
         auto parsedFile = new ParsedFile(fileName, stream);
         return parsedFile;
     } catch (ParseCancellationException& p) {
+        // NOTE: Probably not called at all, due to fix sidestepping antlr bug
+        // See code & comment around "throw ParseCancellationException" above
         error("could not parse file %s", fileName.c_str());
     }
 }
