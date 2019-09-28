@@ -1087,6 +1087,19 @@ class Elaborator : public MinispecBaseListener {
             setValue(ctx, res);
         }
 
+        void exitCaseExprItem(MinispecParser::CaseExprItemContext* ctx) override {
+            // bsc does not parse compound expressions correctly in caseExpr,
+            // so wrap them all in parentheses
+            // NOTE: We're modifying ctx->body's value, rather then ctx, which
+            // is unusual. This works fine even if ctx->body is elaborated (ie
+            // non-null getValue()).  See TranslatedCode::emit().
+            auto tc = createTranslatedCodePtr();
+            tc->emitStart(ctx->body);
+            tc->emit("(", ctx->body, ")");
+            tc->emitEnd();
+            setValue(ctx->body, tc);
+        }
+
         // Propagate value
         void exitParenExpr(MinispecParser::ParenExprContext *ctx) override {
             setValue(ctx, getValue(ctx->expression()));
