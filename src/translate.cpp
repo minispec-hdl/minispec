@@ -1550,6 +1550,9 @@ SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*> p
     for (auto tree : parsedTrees) {
         elaboratorWalker.walk(&elab, tree);
         tc.emit(tree);
+        // Ensure there's a newline between files even if the emmitted file
+        // doesn't end with a newline
+        //tc.emitLine();
     }
 
     // Emit parametrics
