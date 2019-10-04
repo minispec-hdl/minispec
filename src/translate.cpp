@@ -816,10 +816,11 @@ class Elaborator : public MinispecBaseListener {
             checkElaboratedParams(ctx);
         }
 
-        void exitArgFormal(MinispecParser::ArgFormalContext* ctx) override {
-            if (ctx->type()->getText() == "Integer")
-                report(BasicError(ctx->type(), "arguments cannot be of Integer type (use a parameter instead)"));
-        }
+        // FIXME: Commented as it breaks testbench code. Uncomment and enforce this after lab 4
+        //void exitArgFormal(MinispecParser::ArgFormalContext* ctx) override {
+        //    if (ctx->type()->getText() == "Integer")
+        //        report(BasicError(ctx->type(), "arguments cannot be of Integer type (use a parameter instead)"));
+        //}
 
         void exitVarAssign(MinispecParser::VarAssignContext* ctx) override {
             if (!ctx->var) return; // vars isn't Integer, as Integers cannot be bit-unpacked
