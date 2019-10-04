@@ -811,6 +811,11 @@ class Elaborator : public MinispecBaseListener {
             }
         }
 
+        void exitParams(MinispecParser::ParamsContext* ctx) override {
+            // All params should be elaborated at translation time
+            checkElaboratedParams(ctx);
+        }
+
         void exitVarAssign(MinispecParser::VarAssignContext* ctx) override {
             if (!ctx->var) return; // vars isn't Integer, as Integers cannot be bit-unpacked
             auto simpleLvalue = dynamic_cast<MinispecParser::SimpleLvalueContext*>(ctx->var);
