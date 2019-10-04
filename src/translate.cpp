@@ -1552,7 +1552,7 @@ SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*> p
         tc.emit(tree);
         // Ensure there's a newline between files even if the emmitted file
         // doesn't end with a newline
-        //tc.emitLine();
+        tc.emitLine();
     }
 
     // Emit parametrics
