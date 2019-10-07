@@ -148,7 +148,7 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
 	    // Some of these messages are followed by "The proviso was implied
 	    // by expressions at the following positions:" clarifications;
 	    // ignore those (don't match at end ($) only).
-	    std::regex provisoRegex("no instances of the form:\\s+(\\S+)#\\((.*)\\)");
+	    std::regex provisoRegex("no instances of the form:\\s+(\\S+?)#\\((.*)\\)");
             std::smatch match;
             if (std::regex_search(body, match, provisoRegex)) {
                 std::string typeclass = match[1];
@@ -178,6 +178,9 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
                     " conflict and cannot both fire every cycle (e.g., they both try to set the same input of a shared module)";
             }
         }
+
+        // Simplify bsc output: Translated::TypeName -> TypeName
+        replace(body, "Translated::", "");
 
         std::stringstream ss;
         ss << hlColored(loc + ":") << " " << (isError? errorColored("error:") : warnColored("warning:")) << " " << body << "\n";
