@@ -23,6 +23,13 @@ void reportMsg(bool isError, const std::string& msg,
     auto& msgs = isError? errMsgs : warnMsgs;
     auto& ctxs = isError? errCtxs : warnCtxs;
     size_t& total = isError? totalErrs : totalWarns;
+    if (msgs.count(msg)) {
+        // Sometimes bsc derps out and spits the same error multiple times
+        // (e.g. double-writes). If we have emitted EXACTLY the same error
+        // already, then don't even count it as a total, regardless of
+        // reportAllMsgs
+        return;
+    }
     if (reportAllMsgs || (!msgs.count(msg) && !ctxs.count(ctx))) {
         msgs.insert(msg);
         if (ctx) ctxs.insert(ctx);
