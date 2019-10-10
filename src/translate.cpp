@@ -1233,23 +1233,42 @@ class Elaborator : public MinispecBaseListener {
                         tc->emitLine("  Wire#(", i->type(), ") ", i->name, " <- mkBypassWire;");
                     }
                 } else if (auto s = stmt->submoduleDecl()) {
-                    // HACK for Vector initialization
+                    // HACK for Vector-of-submodules initialization
                     if (s->type()->name->getText() == "Vector") {
-                        auto params = s->type()->params();
-                        if (!params) {
-                            report(BasicError(s->type(), "Vector must use parameters"));
-                        } else {
-                            auto paramVec = params->param();
-                            if (paramVec.size() != 2) {
-                                report(BasicError(s->type(), "Vector must use 2 parameters"));
+                        // To support nested vectors, traverse all of them
+                        // until we get to the base module, and record how many
+                        // levels of nesting there are
+                        auto curType = s->type();
+                        size_t nestingDepth = 0;
+                        while (curType && curType->name->getText() == "Vector") {
+                            nestingDepth++;
+                            auto params = curType->params();
+                            if (!params) {
+                                report(BasicError(curType, "Vector must use parameters"));
+                                curType = nullptr;
                             } else {
-                                auto elemType = paramVec[1]->type();
-                                if (!elemType) {
-                                    report(BasicError(paramVec[1], "Vector's second parameter must be a type"));
+                                auto paramVec = params->param();
+                                if (paramVec.size() != 2) {
+                                    report(BasicError(curType, "Vector must use 2 parameters"));
+                                    curType = nullptr;
                                 } else {
-                                    tc->emitLine("  ", s->type(), s->name, " <- replicateM(", moduleName(elemType), "", s->args(), ");");
+                                    // Next level
+                                    curType = paramVec[1]->type();
+                                    if (!curType) {
+                                        report(BasicError(paramVec[1], "Vector's second parameter must be a type"));
+                                    }
                                 }
                             }
+                        }
+
+                        if (curType) {
+                            // we finished the traversal successfully, and curType is the element's type
+                            assert(nestingDepth);
+                            tc->emit("  ", s->type(), s->name, " <- ");
+                            for (size_t i = 0; i < nestingDepth; i++) tc->emit("replicateM(");
+                            tc->emit(moduleName(curType), "", s->args());
+                            for (size_t i = 0; i < nestingDepth; i++) tc->emit(")");
+                            tc->emitLine(";");
                         }
                     } else {
                         tc->emitLine("  ", s->type(), s->name, " <- ", moduleName(s->type()), s->args(), ";");
