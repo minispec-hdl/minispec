@@ -144,11 +144,13 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
                 body = "expression " + errorColored("'" + elem + "'") + " has type " + hlColored(type) + ", but use requires type " + hlColored(expectedType);
                 elems.push_back(elem);
             }
-        } else if (code == "T0031") {
+        } else if (code == "T0031" || code == "T0032") {
 	    // Some of these messages are followed by "The proviso was implied
 	    // by expressions at the following positions:" clarifications;
 	    // ignore those (don't match at end ($) only).
-	    std::regex provisoRegex("no instances of the form:\\s+(\\S+?)#\\((.*)\\)");
+	    std::regex provisoRegex((code == "T0031")?
+                        "no instances of the form:\\s+(\\S+?)#\\((.*)\\)" :
+                        "proviso which could not be resolved:\\s+(\\S+?)#\\((.*)\\) The proviso was implied by expressions at the following positions: (\\S+)");
             std::smatch match;
             if (std::regex_search(body, match, provisoRegex)) {
                 std::string typeclass = match[1];
@@ -159,7 +161,21 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
                     body = "type " + hlColored(type) + " does not support comparison operations";
                 } else if (typeclass == "Literal") {
                     body = "cannot convert literal to type " + hlColored(type);
+                } else if (typeclass == "FShow") {
+                    body = "cannot display value of type " + hlColored(type);
+                    if (type.find("function") == 0)
+                        body += " (this is a function, did you forget some/all the arguments?)";
                 }
+            }
+
+            if (code == "T0032") {
+                // T0032 is a typeclass match failure on parametric types whose inner type fails the match.
+                // For example, FShow#(Vector(Reg#(...))) fails because Reg is not deriving(FShow),
+                // but Vector does deriving(FShow) (if its ElemType is also fshow-able)
+                // 
+                // T0032 loc is way, waaaay off (e.g., the start of the offending module),
+                // so just patch the loc with the expression position parsed above
+                loc = match[3];
             }
 	} else if (code == "T0003") {
 	    // I see these only on mistyped literals, but unbound constructor
@@ -179,12 +195,13 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
             }
         }
 
-        // Simplify bsc output: Translated::TypeName -> TypeName
+        // Simplify bsc output: Translated::TypeName -> TypeName, etc.
         replace(body, "Translated::", "");
+        replace(body, "Vector::Vector", "Vector");
 
         std::stringstream ss;
         ss << hlColored(loc + ":") << " " << (isError? errorColored("error:") : warnColored("warning:")) << " " << body << "\n";
-        ss << contextStrFn(line, lineChar, elems);
+        ss << contextStrFn(line, lineChar, elems) << code;
         reportMsg(isError, ss.str(), sm.getContextInfo(line, lineChar), sm.find(line, lineChar));
     }
 }
