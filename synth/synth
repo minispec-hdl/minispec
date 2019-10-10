@@ -192,7 +192,7 @@ def writeFile(file, data, descr):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            description='Simple synthesis tool for combinational and sequential Bluespec circuits')
+            description='Simple synthesis tool for Minispec or Bluespec circuits')
     parser.add_argument("file", help="Minispec(.ms) or BSV(.bsv) file containing the function or module to synthesize")
     parser.add_argument("target", help="Name of the function or module to synthesize")
     parser.add_argument("--lib", "-l", default="basic", help="Standard cell library to use (basic, extended, multisize, or full)")
@@ -234,8 +234,9 @@ if __name__ == "__main__":
     except:
         print "WARN: Could not prctl()"
 
+    isMinispec = args.file.endswith(".ms")
     isModule = False
-    if args.file.endswith(".ms"):
+    if isMinispec:
         # Minispec: just use msc output
         isModule = args.target[0].isupper()
         print "Compiling %s %s from file %s" % ("module" if isModule else "function", args.target, args.file)
@@ -745,6 +746,26 @@ if __name__ == "__main__":
                     newPorts[name[2:]] = data["modules"][modName]["ports"][name]
             newPorts["out"] = data["modules"][modName]["ports"]["out"]
             data["modules"][modName]["ports"] = newPorts
+        elif isModule and isMinispec:
+            # Remove all RDYs from Minispec modules (they're always 1)
+            rdys = [name for name in data["modules"][modName]["ports"] if name.startswith("RDY_")]
+            for rdy in rdys:
+                del data["modules"][modName]["ports"][rdy]
+            # Remove all ENs that are unconnected (happen on inputs w/o defaults)
+            connectedNets = set()
+            cells = data["modules"][modName]["cells"]
+            for cellName in cells:
+                if "connections" in cells[cellName]:
+                    connections = cells[cellName]["connections"]
+                    for connection in connections:
+                        nets = connections[connection]
+                        for net in nets:
+                            connectedNets.add(net)
+            ens = [name for name in data["modules"][modName]["ports"] if name.startswith("EN_")]
+            deadEns = [en for en in ens if data["modules"][modName]["ports"][en]["bits"][0] not in connectedNets]
+            for en in deadEns:
+                del data["modules"][modName]["ports"][en]
+
         f = open(jsonFile, "w")
         json.dump(data, f)
         f.close()
