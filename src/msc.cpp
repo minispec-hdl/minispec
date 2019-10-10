@@ -186,12 +186,61 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
 	    replace(body, "unbound variable", "undefined variable or function");
 	} else if (code == "T0007") {
 	    replace(body, "unbound type constructor", "undefined type or module");
+        } else if (code == "T0016") {
+            // Error message is good, except when it's an input, so process only that
+            std::regex inputRegex("Field `(.*?)___input' is not in the type `(.*?)' which was derived for this expression");
+            std::smatch match;
+            if (std::regex_search(unprocessedBody, match, inputRegex)) {
+                std::string input = match[1];
+                std::string modType = match[2];
+                body = "module " + hlColored(modType) + " does not have an input named " + errorColored("'" + input + "'");
+            }
+        } else if (code == "G0004") {
+            // Register double-writes and input/wire double-sets
+            std::regex conflictRegex("Rule `(.*?)' uses methods that conflict in parallel: (\\S+) and (\\S+)");
+            std::smatch match;
+            if (std::regex_search(unprocessedBody, match, conflictRegex)) {
+                std::string rule = match[1];
+                std::string m1 = match[2];
+                std::string m2 = match[3];
+                bool isWrite = m1.find(".write") != std::string::npos;
+                bool isWset = m1.find(".wset") != std::string::npos;
+                body = "rule " + errorColored("'" + rule + "'") + " ";
+                if (m1 == m2 && (isWrite || isWset)) {
+                    std::string base = "'" + m1.substr(0, m1.find(".")) + "'";
+                    if (isWrite) {
+                        body += "writes to register " + errorColored(base) + " more than once, which is forbidden";
+                    } else {
+                        assert(isWset);
+                        body += "sets input or wire " + errorColored(base) + " more than once, which is forbidden";
+                    }
+                } else {
+                    // Print a generic message, this must be interacting with Bluespec code
+                    body += "cannot call methods " + errorColored(m1) + " and " + errorColored(m2) + " because they conflict";
+                }
+            }
         } else if (code == "G0005") {
+            // Minispec rules must fire every cycle
             std::regex blockedRegex("The assertion `fire_when_enabled' failed for rule `(.*?)' because it is blocked by rule (.*?) in the scheduler");
             std::smatch match;
             if (std::regex_search(unprocessedBody, match, blockedRegex)) {
                 body = "rules " + errorColored(match[1]) + " and " + errorColored(match[2]) +
                     " conflict and cannot both fire every cycle (e.g., they both try to set the same input of a shared module)";
+            }
+        } else if (code == "G0066") {
+            std::regex unsetRegex("Instance `(.*?)' requires the following method to be always enabled");
+            std::smatch match;
+            if (std::regex_search(unprocessedBody, match, unsetRegex)) {
+                std::string instance = match[1];
+                body = "input or wire " + errorColored("'" + instance + "'") + " has no default value, so it must be set every cycle, but it is never being set";
+            }
+        } else if (code == "G0015") {
+            isError = true; // It's a warning, but promote it to an error!
+            std::regex unsetRegex("Instance `(.*?)' requires the following method to be always enabled, but the condition for executing the method could not be proven to be always True: _write");
+            std::smatch match;
+            if (std::regex_search(unprocessedBody, match, unsetRegex)) {
+                std::string instance = match[1];
+                body = "input or wire " + errorColored("'" + instance + "'") + " has no default value, so it must be set every cycle, but it is being set only sometimes (at least, I cannot prove that a rule is setting it every cycle; simplify your control flow or add a default value)";
             }
         }
 
@@ -201,7 +250,7 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
 
         std::stringstream ss;
         ss << hlColored(loc + ":") << " " << (isError? errorColored("error:") : warnColored("warning:")) << " " << body << "\n";
-        ss << contextStrFn(line, lineChar, elems) << code;
+        ss << contextStrFn(line, lineChar, elems);
         reportMsg(isError, ss.str(), sm.getContextInfo(line, lineChar), sm.find(line, lineChar));
     }
 }

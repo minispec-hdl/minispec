@@ -839,7 +839,12 @@ class Elaborator : public MinispecBaseListener {
                             [&](tree::ParseTree* ctx) { return getValue(ctx); });
                     tc->emitStart(ctx);
                     tc->emitStart(memberLvalue);
-                    tc->emit(base, "." + memberLvalue->lowerCaseIdentifier()->getText() + "___input");
+                    tc->emit(base);
+                    tc->emit(".");
+                    // Break after period to better translate bsc errors
+                    tc->emitStart(memberLvalue);
+                    tc->emit(memberLvalue->lowerCaseIdentifier()->getText() + "___input");
+                    tc->emitEnd();
                     tc->emitEnd();
                     tc->emit("(", ctx->expression(), ");");
                     tc->emitEnd();
