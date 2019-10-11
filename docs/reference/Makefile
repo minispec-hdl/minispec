@@ -8,6 +8,9 @@ figs:
 	make -C figures/
 
 $(TGT): figs
+	date --iso-8601 > auto_version.tex
+	echo " from source version " >> auto_version.tex
+	../../misc/gitver.py >> auto_version.tex
 	pdflatex $(LATEX_OPTS) $(TGT)
 	pdflatex $(LATEX_OPTS) $(TGT)
 	pdflatex $(LATEX_OPTS) $(TGT)
@@ -19,7 +22,7 @@ $(TGT): figs
 
 tidy:
 	make -C figures clean
-	rm -f *.aux *.blg *.bbl *.log *.brf *.dvi *.ps metadata.txt
+	rm -f auto_version.tex *.aux *.blg *.bbl *.log *.brf *.dvi *.ps metadata.txt
 
 clean: tidy
 	rm -f $(TGT).pdf
