@@ -138,14 +138,14 @@ Bit#(2) a = 2'd2;
 Bool b = True;
 
 // If statements
-Bit#(8) x = 0;
+Bit#(4) x = 0;
 if (a > 2) x = {0, a};
 
 Bit#(4) y;
 if (b) y = x;
 else y = ~x;
 
-Bit#(2) z;
+Bit#(4) z;
 if (a > 2) z = x;
 else if (b) z = y;
 else begin
@@ -154,7 +154,7 @@ else begin
 end
 
 // Case statement
-case (z):
+case (z)
   1 : x = 1;
   2 : begin
         x = 2;

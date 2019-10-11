@@ -221,7 +221,7 @@ Bool isOdd = case (v)
   2'b01 : True;
   2'b11 : True;
   default : False;
-endcase
+endcase;
 
 // Can omit default if we
 // list all possibilities
@@ -230,7 +230,7 @@ Bit#(2) plusOne = case (v)
   1 : 2;
   2 : 3;
   3 : 0;
-endcase
+endcase;
 \end{mscode}
 \vspace{-2em}
 \end{wrapfigure}
