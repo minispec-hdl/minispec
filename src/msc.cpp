@@ -23,7 +23,7 @@ typedef std::function<std::string(uint32_t, uint32_t)> TranslateLocFn;
 typedef std::function<std::string(uint32_t, uint32_t, const std::vector<std::string>&)> ContextStrFn;
 typedef std::function<tree::ParseTree*(uint32_t, uint32_t)> FindFn;
 
-void reportBluespecOutput(std::string str, const SourceMap& sm, const std::string& topLevel) {
+void reportBluespecOutput(std::string str, const SourceMap& sm, const std::string& topLevel, bool simOut) {
     typedef std::regex_iterator<std::string::const_iterator> regex_it;
     const regex_it rend;
 
@@ -235,12 +235,16 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
                 body = "input or wire " + errorColored("'" + instance + "'") + " has no default value, so it must be set every cycle, but it is never being set";
             }
         } else if (code == "G0015") {
-            isError = true; // It's a warning, but promote it to an error!
             std::regex unsetRegex("Instance `(.*?)' requires the following method to be always enabled, but the condition for executing the method could not be proven to be always True: _write");
             std::smatch match;
             if (std::regex_search(unprocessedBody, match, unsetRegex)) {
+                // This is a warning, but its gravity is context-dependent. If
+                // we're producing Verilog, then it should stay a warning (or
+                // go away); if this is simulation, then we must promote it to
+                // an error, as it'll actually cause things to misbehave.
+                isError = simOut;
                 std::string instance = match[1];
-                body = "input or wire " + errorColored("'" + instance + "'") + " has no default value, so it must be set every cycle, but it is being set only sometimes (at least, I cannot prove that a rule is setting it every cycle; simplify your control flow or add a default value)";
+                body = "input or wire " + errorColored("'" + instance + "'") + " has no default value, so it must be set every cycle, but it is being set only sometimes (at least, I cannot prove that a rule is setting it every cycle; simplify your control flow or add a default value); note: this warning is promoted to an error when producing simulation executables";
             }
         }
 
@@ -421,7 +425,7 @@ int main(int argc, const char* argv[]) {
     auto runBscCmd = [&](const std::string& cmd) {
         //std::cout << cmd << "\n";
         auto compileRes = run(cmd);
-        reportBluespecOutput(compileRes.output, sm, topLevel);
+        reportBluespecOutput(compileRes.output, sm, topLevel, simOut);
         exitIfErrors();
 	if (compileRes.exitCode != 0) {
             // If we didn't parse any error but bsc failed, this is typically
