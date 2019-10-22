@@ -197,12 +197,15 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
             }
         } else if (code == "G0004") {
             // Register double-writes and input/wire double-sets
-            std::regex conflictRegex("Rule `(.*?)' uses methods that conflict in parallel: (\\S+) and (\\S+)");
+            std::regex conflictRegex("Rule `(.*?)' uses methods that conflict in parallel: (.*?)(\\S+) and (.*?)(\\S+) For the complete expressions");
             std::smatch match;
             if (std::regex_search(unprocessedBody, match, conflictRegex)) {
                 std::string rule = match[1];
-                std::string m1 = match[2];
-                std::string m2 = match[3];
+                // g1/g2 are the "guards" and may be empty; m1 and m2 are the methods
+                std::string g1 = match[2];
+                std::string m1 = match[3];
+                std::string g2 = match[4];
+                std::string m2 = match[5];
                 bool isWrite = m1.find(".write") != std::string::npos;
                 bool isWset = m1.find(".wset") != std::string::npos;
                 body = "rule " + errorColored("'" + rule + "'") + " ";
@@ -214,6 +217,9 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
                         assert(isWset);
                         body += "sets input or wire " + errorColored(base) + " more than once, which is forbidden";
                     }
+                    // Non-disjoint if statements are confusing, so clarify
+                    if (g1 == g2 || g1 == "if (...) ")
+                        body += "; both of these happen inside if statements that have overlapping predicates (make them disjoint, so that they never take effect on the same cycle)";
                 } else {
                     // Print a generic message, this must be interacting with Bluespec code
                     body += "cannot call methods " + errorColored(m1) + " and " + errorColored(m2) + " because they conflict";
