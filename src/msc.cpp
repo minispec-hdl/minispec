@@ -219,7 +219,7 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
                     }
                     // Non-disjoint if statements are confusing, so clarify
                     if (g1 == g2 || g1 == "if (...) ")
-                        body += "; both of these happen inside if statements that have overlapping predicates (make them disjoint, so that they never take effect on the same cycle)";
+                        body += "; these happen inside if statements that have overlapping predicates (make the if statements mutually exclusive, so that they never take effect on the same cycle)";
                 } else {
                     // Print a generic message, this must be interacting with Bluespec code
                     body += "cannot call methods " + errorColored(m1) + " and " + errorColored(m2) + " because they conflict";
