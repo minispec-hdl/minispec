@@ -165,6 +165,16 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
                     body = "cannot display value of type " + hlColored(type);
                     if (type.find("function") == 0)
                         body += " (this is a function, did you forget some/all the arguments?)";
+                } else if (typeclass == "Add") {
+                    body = "expression type has a number of bits or elements incompatible with its use";
+                    std::regex addRegex("(\\d+), (\\d+), (\\d+)");
+                    std::smatch addMatch;
+                    if (std::regex_search(type, addMatch, addRegex)) {
+                        std::string n1 = addMatch[1];
+                        std::string n2 = addMatch[2];
+                        std::string n3 = addMatch[3];
+                        body += " (for lengths to match, "  + n1 + " + " + n2 + " should equal " + n3 + ")";
+                    }
                 }
             }
 
@@ -261,6 +271,7 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
         std::stringstream ss;
         ss << hlColored(loc + ":") << " " << (isError? errorColored("error:") : warnColored("warning:")) << " " << body << "\n";
         ss << contextStrFn(line, lineChar, elems);
+        //ss << code;
         reportMsg(isError, ss.str(), sm.getContextInfo(line, lineChar), sm.find(line, lineChar));
     }
 }
