@@ -159,7 +159,10 @@ class TranslatedCode {
                         Interval prev = prCtx->children[i-1]->getSourceInterval();
                         Interval cur = prCtx->children[i]->getSourceInterval();
                         if (prev.b + 1 < cur.a) {
-                            code << tokenStream->getText(Interval(prev.b + 1, cur.a -1));
+                            std::string s = tokenStream->getText(Interval(prev.b + 1, cur.a -1));
+                            // bsc treats tabs as multiple spaces, so avoid tabs altogether
+                            replace(s, "\t", " ");
+                            code << s;
                         }
                     }
                     emit(ctx->children[i]);
