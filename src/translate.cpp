@@ -254,6 +254,7 @@ class IntegerContext {
             std::unordered_map<std::string, ParametricUsePtr> types;  // TODO: Rename class... VarContext?
             bool childrenCanMutate;
             bool poisonsAncestors;
+            bool isMethod;
         };
 
         std::vector<Level> levels;
@@ -274,11 +275,12 @@ class IntegerContext {
         }
 
         // Packages, modules
-        void enterImmutableLevel() { levels.push_back({{}, {}, {}, false, false}); }
+        void enterImmutableLevel() { levels.push_back({{}, {}, {}, false, false, false}); }
         // Functions, methods, begin/end blocks, for loops
-        void enterMutableLevel() { levels.push_back({{}, {}, {}, true, false}); }
+        void enterMutableLevel() { levels.push_back({{}, {}, {}, true, false, false}); }
+        void enterMethodLevel() { levels.push_back({{}, {}, {}, true, false, true}); }
         // If/else, case
-        void enterPoisoningLevel() { levels.push_back({{}, {}, {}, true, true}); }
+        void enterPoisoningLevel() { levels.push_back({{}, {}, {}, true, true, false}); }
 
         void exitLevel() { assert(levels.size() > 1); levels.pop_back(); }
 
@@ -351,6 +353,11 @@ class IntegerContext {
                 }
             }
             return false;
+        }
+
+        bool isInMethod() const {
+            return std::any_of(levels.begin(), levels.end(),
+                    [](const Level& l){ return l.isMethod; });
         }
 };
 
@@ -715,7 +722,7 @@ class Elaborator : public MinispecBaseListener {
     public:
         // Context level control
         //void enterModuleDef(MinispecParser::ModuleDefContext* ctx) override { ic.enterImmutableLevel(); }
-        void enterMethodDef(MinispecParser::MethodDefContext* ctx) override { ic.enterMutableLevel(); }
+        void enterMethodDef(MinispecParser::MethodDefContext* ctx) override { ic.enterMethodLevel(); }
         void enterRuleDef(MinispecParser::RuleDefContext* ctx) override { ic.enterMutableLevel(); }
         void enterFunctionDef(MinispecParser::FunctionDefContext* ctx) override { ic.enterMutableLevel(); }
         void enterBeginEndBlock(MinispecParser::BeginEndBlockContext* ctx) override { ic.enterMutableLevel(); }
@@ -861,6 +868,7 @@ class Elaborator : public MinispecBaseListener {
                 if (submoduleNames.count(base->lowerCaseIdentifier()->getText())) {
                     if (hasSlice) report(BasicError(memberLvalue, "submodule input assignment has slicing ([i:j]) in lvalue, which is illegal"));
                     if (hasMember) report(BasicError(memberLvalue, "cannot set the input of a submodule's submodule"));
+                    if (ic.isInMethod()) report(BasicError(memberLvalue, "a method cannot set the input of a submodule"));
 
                     TranslatedCodePtr tc = std::make_shared<TranslatedCode>(
                             [&](tree::ParseTree* ctx) { return getValue(ctx); });
@@ -880,6 +888,10 @@ class Elaborator : public MinispecBaseListener {
                     setValue(ctx, tc);
                 }
             }
+        }
+
+        void exitRegWrite(MinispecParser::RegWriteContext* ctx) override {
+            if (ic.isInMethod()) report(BasicError(ctx->lhs, "a method cannot write to a register"));
         }
 
         void exitVarExpr(MinispecParser::VarExprContext* ctx) override {
