@@ -165,6 +165,22 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
                     body = "cannot display value of type " + hlColored(type);
                     if (type.find("function") == 0)
                         body += " (this is a function, did you forget some/all the arguments?)";
+                } else if (typeclass == "Bits") {
+                    std::regex bitsRegex("(.*?), (\\S+)");
+                    std::smatch bitsMatch;
+                    if (std::regex_search(type, bitsMatch, bitsRegex)) {
+                        std::string badType = bitsMatch[1];
+                        std::string length = bitsMatch[2];
+                        body = "type " + errorColored("'" + badType + "'") + " cannot be used here";
+                        if (badType == "Integer") {
+                            body += " because Integer is a compile-time-only type with an unbounded number of bits, so it can't be synthesized to hardware";
+                        } else if (length == "a__") {
+                            // FIXME: This happens in Reg#(), but seems very tailored.
+                            body += " because this type is not synthesizable to bits, which is required by the use";
+                        } else {
+                            body += " because either this type is not synthesizable to bits, or it has a bit-width incompatible with its use";
+                        }
+                    }
                 } else if (typeclass == "Add") {
                     body = "expression type has a number of bits or elements incompatible with its use";
                     std::regex addRegex("(\\d+), (\\d+), (\\d+)");
