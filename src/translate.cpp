@@ -1268,6 +1268,7 @@ class Elaborator : public MinispecBaseListener {
                             // we finished the traversal successfully, and curType is the element's type
                             assert(nestingDepth);
                             tc->emit("  ", s->type(), s->name, " <- ");
+                            tc->emitStart(s->type());  // pinpoint replicateM to the Vector type
                             for (size_t i = 0; i < nestingDepth; i++) tc->emit("replicateM(");
                             tc->emitStart(curType);
                             tc->emit(moduleName(curType));
@@ -1275,6 +1276,7 @@ class Elaborator : public MinispecBaseListener {
                             tc->emit(s->args());
                             for (size_t i = 0; i < nestingDepth; i++) tc->emit(")");
                             tc->emitLine(";");
+                            tc->emitEnd();
                         }
                     } else {
                         tc->emit("  ", s->type(), s->name, " <- ");
