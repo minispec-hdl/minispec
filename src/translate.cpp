@@ -867,10 +867,12 @@ class Elaborator : public MinispecBaseListener {
                     tc->emitStart(ctx);
                     tc->emitStart(memberLvalue);
                     tc->emit(memberLvalue->lvalue());
+                    // Break before and after period to better translate bsc errors (sometimes bsc flags the period...)
+                    tc->emitStart(memberLvalue);
                     tc->emit(".");
-                    // Break after period to better translate bsc errors
                     tc->emitStart(memberLvalue);
                     tc->emit(memberLvalue->lowerCaseIdentifier()->getText() + "___input");
+                    tc->emitEnd();
                     tc->emitEnd();
                     tc->emitEnd();
                     tc->emit("(", ctx->expression(), ");");
