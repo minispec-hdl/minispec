@@ -1269,12 +1269,19 @@ class Elaborator : public MinispecBaseListener {
                             assert(nestingDepth);
                             tc->emit("  ", s->type(), s->name, " <- ");
                             for (size_t i = 0; i < nestingDepth; i++) tc->emit("replicateM(");
-                            tc->emit(moduleName(curType), "", s->args());
+                            tc->emitStart(curType);
+                            tc->emit(moduleName(curType));
+                            tc->emitEnd();
+                            tc->emit(s->args());
                             for (size_t i = 0; i < nestingDepth; i++) tc->emit(")");
                             tc->emitLine(";");
                         }
                     } else {
-                        tc->emitLine("  ", s->type(), s->name, " <- ", moduleName(s->type()), s->args(), ";");
+                        tc->emit("  ", s->type(), s->name, " <- ");
+                        tc->emitStart(s->type());
+                        tc->emit(moduleName(s->type()));
+                        tc->emitEnd();
+                        tc->emitLine(s->args(), ";");
                     }
                 } else if (auto x = stmt->stmt()) {
                     tc->emitLine("  ", x);
