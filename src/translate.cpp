@@ -836,13 +836,37 @@ class Elaborator : public MinispecBaseListener {
                     setValue(ctx, Skip());
                 }
             } else if (memberLvalue) {
-                auto base = dynamic_cast<MinispecParser::SimpleLvalueContext*>(memberLvalue->lvalue());
-                if (base && submoduleNames.count(base->lowerCaseIdentifier()->getText())) {
+                // memberLvalue's lvalue() can be a Simple/Index/Slice/Member lvalue.
+                // Two of these are correct: simple and index.
+                // The other two denote different errors (when used on submodules):
+                // slice is just garbage, and member means the user is trying to reach
+                // into a submodule's input (also super-illegal).
+                // We first get to the base, and raise errors only if it's a submodule.
+                MinispecParser::LvalueContext* cur = memberLvalue->lvalue();
+                bool hasSlice = false;
+                bool hasMember = false;
+                while (!dynamic_cast<MinispecParser::SimpleLvalueContext*>(cur)) {
+                    auto ilv = dynamic_cast<MinispecParser::IndexLvalueContext*>(cur);
+                    auto mlv = dynamic_cast<MinispecParser::MemberLvalueContext*>(cur);
+                    auto slv = dynamic_cast<MinispecParser::SliceLvalueContext*>(cur);
+                    assert(ilv || mlv || slv);
+                    if (ilv) cur = ilv->lvalue();
+                    else if (mlv) cur = mlv->lvalue();
+                    else cur = slv->lvalue();
+                    if (mlv) hasMember = true;
+                    if (slv) hasSlice = true;
+                }
+                auto base = dynamic_cast<MinispecParser::SimpleLvalueContext*>(cur);
+                assert(base);
+                if (submoduleNames.count(base->lowerCaseIdentifier()->getText())) {
+                    if (hasSlice) report(BasicError(memberLvalue, "submodule input assignment has slicing ([i:j]) in lvalue, which is illegal"));
+                    if (hasMember) report(BasicError(memberLvalue, "cannot set the input of a submodule's submodule"));
+
                     TranslatedCodePtr tc = std::make_shared<TranslatedCode>(
                             [&](tree::ParseTree* ctx) { return getValue(ctx); });
                     tc->emitStart(ctx);
                     tc->emitStart(memberLvalue);
-                    tc->emit(base);
+                    tc->emit(memberLvalue->lvalue());
                     tc->emit(".");
                     // Break after period to better translate bsc errors
                     tc->emitStart(memberLvalue);
