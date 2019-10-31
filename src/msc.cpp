@@ -221,6 +221,17 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
                 std::string modType = match[2];
                 body = "module " + hlColored(modType) + " does not have an input named " + errorColored("'" + input + "'");
             }
+        } else if (code == "T0081" || code == "T0083" || code == "T0084") {
+            // Errors related to using a function with the wrong number of arguments
+            // First, the expected/inferred type trailing info is more confusing then helpful (function type noise). So take that out.
+            std::string trailMarker = (code == "T0081")? " Expected type:" : " The expected type is:";
+            auto trailStart = body.find(trailMarker);
+            body = body.substr(0, trailStart);  // safe even if trail is string::npos
+            // Second, if the function is actually a module, don't call it a function :)
+            if (body.find(": mk") != std::string::npos) {
+                replace(body, ": mk", ": ");
+                replace(body, "function", "module");
+            }
         } else if (code == "G0004") {
             // Register double-writes and input/wire double-sets
             std::regex conflictRegex("Rule `(.*?)' uses methods that conflict in parallel: (.*?)(\\S+) and (.*?)(\\S+) For the complete expressions");
