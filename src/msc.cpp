@@ -245,18 +245,27 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
                 std::string m2 = match[5];
                 bool isWrite = m1.find(".write") != std::string::npos;
                 bool isWset = m1.find(".wset") != std::string::npos;
+                bool isWget2 = m2.find(".wget") != std::string::npos;
+                bool isWhas2 = m2.find(".whas") != std::string::npos;
+                std::string base1 = "'" + m1.substr(0, m1.find(".")) + "'";
+                std::string base2 = "'" + m2.substr(0, m1.find(".")) + "'";
+
                 body = "rule " + errorColored("'" + rule + "'") + " ";
                 if (m1 == m2 && (isWrite || isWset)) {
-                    std::string base = "'" + m1.substr(0, m1.find(".")) + "'";
                     if (isWrite) {
-                        body += "writes to register " + errorColored(base) + " more than once, which is forbidden";
+                        body += "writes to register " + errorColored(base1) + " more than once, which is forbidden";
                     } else {
                         assert(isWset);
-                        body += "sets input or wire " + errorColored(base) + " more than once, which is forbidden";
+                        body += "sets input or wire " + errorColored(base1) + " more than once, which is forbidden";
                     }
                     // Non-disjoint if statements are confusing, so clarify
                     if (g1 == g2 || g1 == "if (...) ")
                         body += "; these happen inside if statements that have overlapping predicates (make the if statements mutually exclusive, so that they never take effect on the same cycle)";
+                } else if (isWset && isWget2 && base1 == base2) {
+                    body += "both sets input or wire " + errorColored(base1) + ", and reads from it (perhaps through a method), which is forbidden";
+                } else if (isWset && isWhas2 && base1 == base2) {
+                    // NOTE(dsm): whas seems to always fire with wget; print them separately though, in case there's a wset/whas conflict but not wset/wget
+                    body += "both sets input or wire " + errorColored(base1) + " (which has a default value), and reads from it (perhaps through a method), which is forbidden";
                 } else {
                     // Print a generic message, this must be interacting with Bluespec code
                     body += "cannot call methods " + errorColored(m1) + " and " + errorColored(m2) + " because they conflict";
