@@ -689,7 +689,26 @@ class Elaborator : public MinispecBaseListener {
                         auto expr = dynamic_cast<MinispecParser::ExpressionContext*>(ctx);
                         if (!expr) return;
                         auto res = parent->getValue(ctx);
-                        if (!res.is<int64_t>()) parent->report(ElabError(ctx, res));
+                        if (!res.is<int64_t>()) {
+                            std::string errMsg = quote(ctx) + " is neither a type nor an Integer value";
+                            // Try to arriave at a CallExpr
+                            MinispecParser::CallExprContext* callExpr = nullptr;
+                            auto opExpr = dynamic_cast<MinispecParser::OperatorExprContext*>(expr);
+                            auto binopExpr = opExpr->binopExpr();
+                            assert(binopExpr);
+                            if (binopExpr && binopExpr->unopExpr() && binopExpr->unopExpr()->exprPrimary())
+                                callExpr = dynamic_cast<MinispecParser::CallExprContext*>(binopExpr->unopExpr()->exprPrimary());
+                            
+                            if (callExpr) {
+                                auto fcnStr = callExpr->fcn->getText();
+                                auto cStr = callExpr->getText();
+                                if (isupper(fcnStr[0])) {
+                                    replace(cStr, fcnStr + "(" , fcnStr + "#(");
+                                    errMsg += " (did you mean '" + fixColored(cStr) + "'?)";
+                                }
+                            }
+                            parent->report(ElabError(ctx, res, errMsg.c_str()));
+                        }
                     }
                     SubListener(Elaborator* parent) : parent(parent) {}
             };
