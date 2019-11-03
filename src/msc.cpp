@@ -48,6 +48,7 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
 
     auto translateAllLocs = [&](std::string& msg) {
         std::smatch locMatch;
+        std::unordered_map<std::string, std::tuple<uint32_t, uint32_t>> locToPos;
         while (std::regex_search(msg, locMatch, locRegex)) {
             std::string file = locMatch[1];
             uint32_t line = atoi(locMatch[2].str().c_str());
@@ -59,7 +60,9 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
                 loc = file + ":" + std::to_string(line) + ":" + std::to_string(lineChar);
             }
             replace(msg, locMatch[0], hlColored(loc));
+            locToPos[hlColored(loc)] = std::tie(line, lineChar);
         }
+        return locToPos;
     };
 
     auto contextStrFn = [&](uint32_t line, uint32_t lineChar,
@@ -114,7 +117,7 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
         body = trim(body);
         std::string unprocessedBody = body;
         if (body.size()) body[0] = tolower(body[0]);
-        translateAllLocs(body);
+        auto locToPos = translateAllLocs(body);
 
         // Find and highlight syntax elements
         std::vector<std::string> elems;
@@ -145,12 +148,32 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
                 elems.push_back(elem);
             }
         } else if (code == "T0031" || code == "T0032") {
-	    // Some of these messages are followed by "The proviso was implied
-	    // by expressions at the following positions:" clarifications;
-	    // ignore those (don't match at end ($) only).
+            // First, find if the compiler is pinpointing an expression.
+            // If so, use the expression loc as the loc, as that is,
+            // by observation, more accurate.
+            // NOTE: We used to do this only for T0032, where the default loc
+            // is always way off---the beginning of the offending module. But
+            // for some T0031s we've found the default loc to be bad too, so
+            // just do it always. If the location is perplexing in some cases,
+            // we could do more detailed analysis to see when the default loc
+            // is bad (e.g., it's untranslated)
+            std::regex exprRegex(" The proviso was implied by expressions at the following positions: (\\S+)");
+            std::smatch exprMatch;
+            if (std::regex_search(body, exprMatch, exprRegex)) {
+                std::string exprLoc = exprMatch[1];
+                bool isLoc = locToPos.find(exprLoc) != locToPos.end();
+                bool isMinispec = exprLoc.find("(translated") == std::string::npos;
+                if (isLoc && isMinispec) {
+                    loc = exprLoc;
+                    std::tie(line, lineChar) = locToPos[exprLoc];
+                    replace(body, exprMatch[0], "");  // take it out
+                }
+            }
+
+	    // Then, handle the actual proviso error
 	    std::regex provisoRegex((code == "T0031")?
                         "no instances of the form:\\s+(\\S+?)#\\((.*)\\)" :
-                        "proviso which could not be resolved:\\s+(\\S+?)#\\((.*)\\) The proviso was implied by expressions at the following positions: (\\S+)");
+                        "proviso which could not be resolved:\\s+(\\S+?)#\\((.*)\\)");
             std::smatch match;
             if (std::regex_search(body, match, provisoRegex)) {
                 std::string typeclass = match[1];
@@ -191,17 +214,15 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
                         std::string n3 = addMatch[3];
                         body += " (for lengths to match, "  + n1 + " + " + n2 + " should equal " + n3 + ")";
                     }
+                    // All the "overlength" expressions I've seen so far (e.g.,
+                    // concatenation) follow this format; if you see something
+                    // else, e.g., Add#(a__, 1, 0), generalize this regex.
+                    std::regex overRegex("(\\d+), (\\S+)_, 0");
+                    if (std::regex_search(type, addMatch, overRegex)) {
+                        std::string n1 = addMatch[1];
+                        body += " (expression has " + n1 + " more/fewer bits or elements than its use allows)";
+                    }
                 }
-            }
-
-            if (code == "T0032") {
-                // T0032 is a typeclass match failure on parametric types whose inner type fails the match.
-                // For example, FShow#(Vector(Reg#(...))) fails because Reg is not deriving(FShow),
-                // but Vector does deriving(FShow) (if its ElemType is also fshow-able)
-                // 
-                // T0032 loc is way, waaaay off (e.g., the start of the offending module),
-                // so just patch the loc with the expression position parsed above
-                loc = match[3];
             }
 	} else if (code == "T0003") {
 	    // I see these only on mistyped literals, but unbound constructor
