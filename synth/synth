@@ -3,8 +3,9 @@
 # Copyright (C) 2018-2019 by Daniel Sanchez and the 6.004 staff at the
 # Massachusetts Institute of Technology
 import argparse, ctypes, json, os, re, string, subprocess, sys
+from minispeclayout import MinispecLayout
 
-## BSV compilation helpers
+#### BSV compilation helpers
 
 # Given multi-line input BSV, returns BSV without single or multi-line comments
 def stripComments(input):
@@ -123,6 +124,7 @@ def compileBsvModule(input, args):
 def sanitizeParametric(p):
     return p.replace("#", "_").replace(",", "_").replace("(", "").replace(")", "").replace(" ", "").replace("\t", "")
 
+
 # Runs a command with fail-stop semantics, like make. If the program returns
 # successfully, run() returns stdout and stderr; on a failure, run() stops the
 # program.
@@ -201,6 +203,7 @@ if __name__ == "__main__":
     parser.add_argument("--synthdir", "-s", default="synthDir", help="Folder for intermediate synthesis files")
     parser.add_argument("--view", "-v", default=False, action="store_true", help="Visualize resulting circuit (not available with full standard cell library)")
     parser.add_argument("--names", "-n", default=False, action="store_true", help="Try to recover net names for gate outputs in the critical path (experimental, takes longer)")
+    parser.add_argument("--rawnames", default=False, action="store_true", help="For Minispec circuits, skip type analysis and report raw wire names (type-enhanced wire names will be clearer, but this can be useful for debugging)")
     parser.add_argument("--retime", "-r", default=False, action="store_true", help="Enable retiming")
     args = parser.parse_args()
 
@@ -240,7 +243,7 @@ if __name__ == "__main__":
         # Minispec: just use msc output
         isModule = args.target[0].isupper()
         print "Compiling %s %s from file %s" % ("module" if isModule else "function", args.target, args.file)
-        run("(cd %s && msc -o v %s '%s')" % (args.synthdir, os.path.abspath(args.file), args.target))
+        run("(cd %s && msc -o v,bsv %s '%s')" % (args.synthdir, os.path.abspath(args.file), args.target))
         modName = "mk" + args.target.strip() if "#" not in args.target else "mkTopLevel___"
     else:
         # Bluespec
@@ -517,6 +520,13 @@ if __name__ == "__main__":
         if bsvEndPoint.startswith("$0"):
             # State element
             bsvEndPoint = bsvEndPoint[2:] + "(DFF_in)"
+
+    if isMinispec and not args.rawnames:
+        bsvFile = [f for f in os.listdir(args.synthdir) if f.endswith(".bsv")][0]
+        bsvCode = readFile(os.path.join(args.synthdir, bsvFile))
+        msLayout = MinispecLayout(bsvCode, modName)
+        bsvStartPoint = msLayout.translate(bsvStartPoint)
+        bsvEndPoint = msLayout.translate(bsvEndPoint)
 
     match = re.search('Printing statistics.(.*?)Executing BLIF backend.', yosysOut, flags = re.MULTILINE | re.DOTALL)
     if not match:
