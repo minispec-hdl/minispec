@@ -1263,18 +1263,41 @@ class Elaborator : public MinispecBaseListener {
             // module rather than the name. This way, we can catch the exact
             // location.
             tc->emitEnd();
-            tc->emitStart(ctx);
+
+            // Figure out whether we need to emit BVI to make the module
+            // external on Verilog compiles. This relies on bsc being invoked
+            // with -D __VERILOG__ when compiling to Verilog.
+            // HACK: Currently, we detect this through a pragma given right
+            // before the module name, e.g. module /*msc_pragma:nosynth*/ Foo
+            // If this is used with any frequency, then we should make (* *)
+            // pragmas part of the language...
+            bool emitBVIDef = false;
+            {
+                auto tokenStream = getTokenStream(ctx);
+                Interval si0 = ctx->children[0]->getSourceInterval();
+                Interval si1 = ctx->children[1]->getSourceInterval();
+                if (si0.b + 1 < si1.a) {
+                    std::string s = tokenStream->getText(Interval(si0.b + 1, si1.a -1));
+                    emitBVIDef = s.find("msc_pragma:nosynth") != std::string::npos;
+                }
+            }
+
+            if (emitBVIDef) tc->emitLine("`ifndef __VERILOG__");
 
             // Then, emit the module, following standard BSV conventions for naming
-            if (ctx->moduleId()->paramFormals()) {
-                auto pu = getValue(ctx->moduleId()).as<ParametricUsePtr>();
-                assert(pu);
-                tc->emit("module \\mk", pu->str(/*alreadyEscaped=*/true), " ");
-            } else {
-                tc->emit("module mk", ctx->moduleId());
-            }
-            if (ctx->argFormals()) tc->emit("#", ctx->argFormals());
-            tc->emitLine("(", ctx->moduleId(), ");");
+            tc->emitStart(ctx);
+            auto emitModuleHeader = [&]() {
+                if (ctx->moduleId()->paramFormals()) {
+                    auto pu = getValue(ctx->moduleId()).as<ParametricUsePtr>();
+                    assert(pu);
+                    tc->emit("module \\mk", pu->str(/*alreadyEscaped=*/true), " ");
+                } else {
+                    tc->emit("module mk", ctx->moduleId());
+                }
+                if (ctx->argFormals()) tc->emit("#", ctx->argFormals());
+                tc->emitLine("(", ctx->moduleId(), ");");
+            };  // lambda wrapper so we can reuse for BVI
+            emitModuleHeader();
 
             // Emit in order required by bsv: submodules/input wires, then rules, then methods
             auto moduleName = [this](MinispecParser::TypeContext* modTypeCtx) {
@@ -1368,8 +1391,42 @@ class Elaborator : public MinispecBaseListener {
                 }
                 tc->emitEnd();
             }
+
             tc->emitLine("endmodule\n");
             tc->emitEnd();
+
+            // Finally, emit BVI if needed
+            if (emitBVIDef) {
+                tc->emitLine("`else\nimport \"BVI\"");
+                tc->emitStart(ctx);
+                emitModuleHeader();
+
+                std::vector<std::string> bviMethodNames;
+                for (auto stmt : ctx->moduleStmt()) {
+                    tc->emitStart(stmt);
+                    if (auto m = stmt->methodDef()) {
+                        tc->emitLine("  method ", m->name, m->name, ";");
+                        bviMethodNames.push_back(m->name->getText());
+                    } else if (auto i = stmt->inputDef()) {
+                        tc->emitLine("  method ", i->name, "___input(", i->name, "___input_value) enable (", i->name, "___input_enable);");
+                        bviMethodNames.push_back(i->name->getText() + "___input");
+                    }
+                    tc->emitEnd();
+                }
+                tc->emitLine("  default_clock clk(clk, (*unused*) clk_gate);");
+                tc->emitLine("  default_reset no_reset;");
+                std::stringstream ss;
+                ss << "(";
+                for (auto s : bviMethodNames) {
+                    ss << s;
+                    ss << ((s == bviMethodNames.back())? ")" : ", ");
+                }
+                tc->emitLine("  schedule ", ss.str(), " CF ", ss.str(), ";");
+                tc->emitLine("endmodule");
+                tc->emitEnd();
+                tc->emitLine("`endif\n");
+            }
+
             setValue(ctx, tc);
 
             if (topLevelParametric &&

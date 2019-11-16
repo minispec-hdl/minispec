@@ -546,7 +546,7 @@ int main(int argc, const char* argv[]) {
     if (verilogOut) {
         if (topLevel.size()) {
             std::stringstream cmd;
-            cmd << "(cd " << tmpDir << " && bsc " << bscOpts << " -verilog -g '" << sm.getTopModule() << "' -u Translated.bsv) 2>&1 >/dev/null";
+            cmd << "(cd " << tmpDir << " && bsc " << bscOpts << " -verilog -D __VERILOG__ -g '" << sm.getTopModule() << "' -u Translated.bsv) 2>&1 >/dev/null";
             runBscCmd(cmd.str());
             typechecked = true;
 
