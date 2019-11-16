@@ -313,3 +313,12 @@ class MinispecLayout:
                     return name + ("[%d]" % offset) + wireSuffix
         # Somehow we ran over... throw?
         return wire
+
+    def getWidth(self, type):
+        if type not in self.typeLayout:
+            return -1
+        layout = self.typeLayout[type]
+        if isinstance(layout, int):
+            return layout
+        else:
+            return sum([size for (member, size) in layout])

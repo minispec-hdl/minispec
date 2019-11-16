@@ -202,6 +202,7 @@ if __name__ == "__main__":
     parser.add_argument("--optLevel", "-O", type=int, default=1, help="Optimization level. -O0 disables optimization, while -O1 performs fixed logic optimization passes.")
     parser.add_argument("--synthdir", "-s", default="synthDir", help="Folder for intermediate synthesis files")
     parser.add_argument("--view", "-v", default=False, action="store_true", help="Visualize resulting circuit (not available with full standard cell library)")
+    parser.add_argument("--interface", "-i", default=False, action="store_true", help="Report full interface (input and output wires) of synthesized module (available only for Minispec)")
     parser.add_argument("--names", "-n", default=False, action="store_true", help="Try to recover net names for gate outputs in the critical path (experimental, takes longer)")
     parser.add_argument("--rawnames", default=False, action="store_true", help="For Minispec circuits, skip type analysis and report raw wire names (type-enhanced wire names will be clearer, but this can be useful for debugging)")
     parser.add_argument("--retime", "-r", default=False, action="store_true", help="Enable retiming")
@@ -521,6 +522,7 @@ if __name__ == "__main__":
             # State element
             bsvEndPoint = bsvEndPoint[2:] + "(DFF_in)"
 
+    msLayout = None
     if isMinispec and not args.rawnames:
         bsvFile = [f for f in os.listdir(args.synthdir) if f.endswith(".bsv")][0]
         bsvCode = readFile(os.path.join(args.synthdir, bsvFile))
@@ -741,6 +743,30 @@ if __name__ == "__main__":
             bits = words * wordsize
             print '%24s %8d %10d %11d %22.3f' % (name, words, wordsize, bits, bits * areaPerBit)
         print '%24s %8s %10s %11d %22.3f' % ("Total", "", "", totalBramBits, totalBramArea)
+
+    if args.interface and msLayout == None:
+        print "ERROR: Cannot report circuit interface (-i/--interface option) because type analysis information is unavailable; Either this is not a Minispec circuit, or type analysis was turned off (e.g., through --rawnames)"
+    elif args.interface:
+        def printIOs(ioDict):
+            print '%33s %22s %22s' % ('Name', 'Type' , 'Bits')
+            print '%33s %22s %22s' % ('----', '----' , '----')
+            totalBits = 0
+            totalBitsUnknown = False
+            for (name, type) in sorted(ioDict.iteritems()):
+                bits = msLayout.getWidth(type)
+                bitsStr = str(bits)
+                if bits == -1:
+                    bitsStr = "Unknown"
+                    totalBitsUnknown = True
+                totalBits += bits
+                print '%33s %22s %22s' % (name, type, bitsStr)
+            totalBitsStr = "Unknown" if totalBitsUnknown else str(totalBits)
+            print '%33s %22s %22s' % ('Total', '', totalBitsStr)
+
+        print "\nCircuit inputs:"
+        printIOs(msLayout.inputs)
+        print "\nCircuit outputs:"
+        printIOs(msLayout.outputs)
 
     if args.view:
         # Remove needless ports and use BSV names for inputs (drop module prefix)
