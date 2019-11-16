@@ -143,13 +143,13 @@ class MinispecLayout:
 
         # 2. Parse top-level interface to infer input and output wire types
         # (inputs: inputs + method args; outputs: method result)
-        inputs = {}
-        outputs = {}
+        inputDict = {}
+        outputDict = {}
         ifcs = re.findall("interface (.+?);(.*?)endinterface", bsv)
         for (ifcName, ifcBody) in ifcs:
+            inputs = {}
+            outputs = {}
             ifcName = _formatType(ifcName.strip())
-            if ifcName != topLevelIfc:
-                continue
             methods = re.findall("method (.+?);", ifcBody)
             for methodProto in methods:
                 (methodType, rest) = _parseType(methodProto)
@@ -158,6 +158,7 @@ class MinispecLayout:
                     arg = _parseParens(rest)[0] # always 1 arg
                     (argType, argName) = _parseType(arg)
                     inputs[methodName + "_" + argName] = argType
+                    inputs[methodName + "_enable"] = "Bool"
                 else:
                     outputs[methodName] = methodType
                     if "(" in rest:
@@ -169,6 +170,33 @@ class MinispecLayout:
             if isFunction:
                 inputs = dict([(k[3:], v) for (k, v) in inputs.items()])
                 outputs = dict([("out", v) for (k, v) in outputs.items()])
+            
+            inputDict[ifcName] = inputs
+            outputDict[ifcName] = outputs
+
+        # Top-level IOs:
+        inputs = inputDict[topLevelIfc].copy()
+        outputs = outputDict[topLevelIfc].copy()
+
+        # Seek out any BVI modules to add them to the top-level I/Os
+        bviModules = dict([(_formatType(_parseParens(modProto)[-1]), _formatType(modProto[:_parseParenLocs(modProto)[-1][0]-1]))
+                for (modProto, modBody) in re.findall('import "BVI" module (.+?);(.+?)endmodule', bsv)])
+        def getBviSubmods(modName):
+            res = []
+            if modName not in submodDict:
+                return res
+            for (t, s) in submodDict[modName]:
+                if t in bviModules:
+                    res.append((s, t))
+                else:
+                    res += [("_".join([s, r]), rt) for (r, rt) in getBviSubmods(t)]
+            return res
+
+        for (submodName, bviType) in getBviSubmods(topLevelIfc):
+            for (name, type) in inputDict[bviType].items():
+                outputs[submodName + "_" + name] = type
+            for (name, type) in outputDict[bviType].items():
+                inputs[submodName + "_" + name] = type
 
 
         # 3. Capture all type definitions
@@ -275,6 +303,7 @@ class MinispecLayout:
         self.regs = regs
         self.inputs = inputs
         self.outputs = outputs
+        self.bviMkNames = set(bviModules.values())
 
     def translate(self, wire):
         # With a top-level wrapper module, we need demangling (in all cases)
@@ -322,3 +351,6 @@ class MinispecLayout:
             return layout
         else:
             return sum([size for (member, size) in layout])
+
+    def isBvi(self, mkName):
+        return mkName in self.bviMkNames

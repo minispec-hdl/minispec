@@ -729,6 +729,9 @@ if __name__ == "__main__":
     print '%24s %8s %22s %22s' % ('Gate type', 'Gates' , 'Area/gate (um^2)', 'Area/type (um^2)')
     print '%24s %8s %22s %22s' % ('---------', '-----' , '----------------', '----------------')
     for (cellName, cellCount, cellArea, typeArea) in cellStats:
+        # Skip BVI/External modules (we add them to the interface)
+        if msLayout != None and msLayout.isBvi(cellName):
+            continue
         if cellArea == 0.0:
             print '%24s %8d %22s %22s' % (cellName, cellCount, "Unknown", "Unknown")
         else:
