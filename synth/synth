@@ -684,6 +684,37 @@ if __name__ == "__main__":
                 unmatched += 1
         print "Name mapping done, %d matched / % d unmatched" % (len(outNodeToVar), unmatched)
 
+    def printCols(widths, *vals):
+        assert len(widths) == len(vals)
+        overage = 0
+        line = ""
+        for i in range(len(widths)):
+            w = widths[i]
+            s = str(vals[i])
+            spaces = max(0, w - len(s))
+            spaces -= min(spaces, overage)
+            overage = overage + spaces + len(s) - w
+            if i > 0:
+                spaces += 1 # inter-col spacing
+            line += " " * spaces + s
+        print line
+
+    # Formats for each of the reports
+    def printTiming(*vals):
+        printCols((24, 8, 22, 22, 0), *vals)
+
+    def printPath(*vals):
+        printCols((33, 22, 22), *vals)
+
+    def printArea(*vals):
+        printCols((24, 8, 22, 22), *vals)
+
+    def printMem(*vals):
+        printCols((24, 8, 10, 11, 22), *vals)
+
+    def printInterface(*vals):
+        printCols((33, 22, 22), *vals)
+
     def formatName(name):
         if name.startswith("~"):
             inv = True
@@ -703,8 +734,8 @@ if __name__ == "__main__":
 
     # Print a cleaned up critical path
     cumDelay = 0.0
-    print '%24s %8s %22s %22s %s' % ('Gate/port', 'Fanout' , 'Gate delay (ps)', 'Cumulative delay (ps)', 'Gate output name' if args.names else '')
-    print '%24s %8s %22s %22s %s' % ('---------', '------' , '---------------', '---------------------', '----------------' if args.names else '')
+    printTiming('Gate/port', 'Fanout' , 'Gate delay (ps)', 'Cumulative delay (ps)', 'Gate output name' if args.names else '')
+    printTiming('---------', '------' , '---------------', '---------------------', '----------------' if args.names else '')
     lineNum = 0;
     for line in pathLines:
         #ABC: Path  1 --     232 : 1    8 BUF_X4   A =   1.86  Df =  22.1   -1.1 ps  S =   7.2 ps  Cin =  3.3 ff  Cout =  16.7 ff  Cmax = 242.3 ff  G =  478
@@ -721,9 +752,9 @@ if __name__ == "__main__":
         outName = formatName(outNodeToVar[outNode]) if args.names and outNode in outNodeToVar else ""
         if (lineNum == 0) :
             gateName = bsvStartPoint
-        print '%24s %8d %22.1f %22.1f %s' % (gateName, fanout, tpd, cumDelay, outName)
+        printTiming(gateName, fanout, "%.1f" % tpd, "%.1f" % cumDelay, outName)
         lineNum += 1
-    print '%24s %8s %22.1f %22.1f' % (bsvEndPoint, 0, 0.0, cumDelay)
+    printTiming(bsvEndPoint, 0, "%.1f" % 0.0, "%.1f" % cumDelay, "")
 
     if args.paths != 0:
         # NOTE: For now, this analysis is independent of the normal
@@ -822,8 +853,8 @@ if __name__ == "__main__":
                     critOuts = critOuts[:args.paths]
                 
                 print "\nLongest paths:"
-                print '%33s %22s %22s' % ('Start', 'End' , 'Delay')
-                print '%33s %22s %22s' % ('-----', '---' , '-----')
+                printPath("Start", "End", "Delay")
+                printPath('-----', '---', '-----')
                 for (delay, out) in critOuts:
                     outName = outNodes[out]
                     cur = out
@@ -837,39 +868,39 @@ if __name__ == "__main__":
                     if msLayout != None:
                         inName = msLayout.translate(inName)
                         outName = msLayout.translate(outName)
-                    print '%33s %22s %22.1f' % (inName, outName, delay)
+                    printPath(inName, outName, "%.1f" % delay)
 
     if len(brams):
         print "\nArea breakdown (excluding memories):"
     else:
         print "\nArea breakdown:"
-    print '%24s %8s %22s %22s' % ('Gate type', 'Gates' , 'Area/gate (um^2)', 'Area/type (um^2)')
-    print '%24s %8s %22s %22s' % ('---------', '-----' , '----------------', '----------------')
+    printArea("Gate type", "Gates" , "Area/gate (um^2)", "Area/type (um^2)")
+    printArea("---------", "-----" , "----------------", "----------------")
     for (cellName, cellCount, cellArea, typeArea) in cellStats:
         # Skip BVI/External modules (we add them to the interface)
         if msLayout != None and msLayout.isBvi(cellName):
             continue
         if cellArea == 0.0:
-            print '%24s %8d %22s %22s' % (cellName, cellCount, "Unknown", "Unknown")
+            printArea(cellName, cellCount, "Unknown", "Unknown")
         else:
-            print '%24s %8d %22.3f %22.3f' % (cellName, cellCount, cellArea, typeArea)
-    print '%24s %8d %22s %22.3f' % ("Total", totalCells, "", totalGateArea)
+            printArea(cellName, cellCount, "%.3f" % cellArea, "%.3f" % typeArea)
+    printArea("Total", totalCells, "", "%.3f" % totalGateArea)
 
     if len(brams):
         print "\nMemories used:"
-        print '%24s %8s %10s %11s %22s' % ('Name', 'Words' , 'Word bits', 'Total bits', 'Approx. Area (um^2)')
-        print '%24s %8s %10s %11s %22s' % ('----', '-----' , '---------', '----------', '-------------------')
+        printMem("Name", "Words" , "Word bits", "Total bits", "Approx. Area (um^2)")
+        printMem("----", "-----" , "---------", "----------", "-------------------")
         for (name, words, wordsize) in sorted(brams):
             bits = words * wordsize
-            print '%24s %8d %10d %11d %22.3f' % (name, words, wordsize, bits, bits * areaPerBit)
-        print '%24s %8s %10s %11d %22.3f' % ("Total", "", "", totalBramBits, totalBramArea)
+            printMem(name, words, wordsize, bits, "%.3f" % (bits * areaPerBit))
+        printMem("Total", "", "", totalBramBits, "%.3f" % totalBramArea)
 
     if args.interface and msLayout == None:
         print "ERROR: Cannot report circuit interface (-i/--interface option) because type analysis information is unavailable; Either this is not a Minispec circuit, or type analysis was turned off (e.g., through --rawnames)"
     elif args.interface:
         def printIOs(ioDict):
-            print '%33s %22s %22s' % ('Name', 'Type' , 'Bits')
-            print '%33s %22s %22s' % ('----', '----' , '----')
+            printInterface("Name", "Type" , "Bits")
+            printInterface("----", "----" , "----")
             totalBits = 0
             totalBitsUnknown = False
             for (name, type) in sorted(ioDict.iteritems()):
@@ -879,9 +910,9 @@ if __name__ == "__main__":
                     bitsStr = "Unknown"
                     totalBitsUnknown = True
                 totalBits += bits
-                print '%33s %22s %22s' % (name, type, bitsStr)
+                printInterface(name, type, bitsStr)
             totalBitsStr = "Unknown" if totalBitsUnknown else str(totalBits)
-            print '%33s %22s %22s' % ('Total', '', totalBitsStr)
+            printInterface("Total", "", totalBitsStr)
 
         print "\nCircuit inputs:"
         printIOs(msLayout.inputs)
