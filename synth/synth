@@ -817,23 +817,31 @@ if __name__ == "__main__":
                 bm = re.search("\.inputs (.*)\n\.outputs (.*)\n", blif)
                 inputs = set(bm.group(1).strip().split(" "))
                 outputs = set(bm.group(2).strip().split(" "))
-                # Add all DFF to I/Os (as they are I/Os from ABC's perspective)
+                # Also consider DFF I/Os (as they are I/Os from ABC's perspective)
+                dffInputs = set()
+                dffOutputs = set()
                 for (d, q, qn) in re.findall(".subckt DFF.*?D=(\S+)\s+Q=(\S+)\s+QN=(\S+)", blif):
                     if d in nameToAbc:
-                        outputs.add(d)
+                        dffOutputs.add(d)
                     if q in nameToAbc:
-                        inputs.add(q)
+                        dffInputs.add(q)
                     if qn in nameToAbc:
-                        inputs.add(qn)
+                        dffInputs.add(qn)
 
                 # Sometimes a node has mutiple names. Prioritize names as follows:
                 def prio(name, isInput):
                     if (isInput and name in inputs) or (not isInput and name in outputs):
-                        return 3 # right name for sure
+                        return 4 # right name for sure
                     if "__h" in name[1:] or "__d" in name[1:] or "__q" in name[1:]:
                         return 0 # internal node names
                     if "$D_IN" in name:
                         return 1 # Sometimes DFF inputs get this name, we want ...(DFF_in) name though
+                    if "$wget" in name:
+                        return 1 # An internal wire name; prefer internal interface over this
+                    if "$auto" in name:
+                        return 1 # Created by some internal process, definitely internal...
+                    if (isInput and name in dffInputs) or (not isInput and name in dffOutputs):
+                        return 3 # generally the right one, BUT sometimes yosys picks an internal node, so this check is after
                     return 2 # probably part of an internal interface, e.g., a BRAM
 
                 inNets = {}
