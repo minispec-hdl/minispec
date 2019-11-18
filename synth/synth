@@ -203,6 +203,7 @@ if __name__ == "__main__":
     parser.add_argument("--synthdir", "-s", default="synthDir", help="Folder for intermediate synthesis files")
     parser.add_argument("--view", "-v", default=False, action="store_true", help="Visualize resulting circuit (not available with full standard cell library)")
     parser.add_argument("--interface", "-i", default=False, action="store_true", help="Report full interface (input and output wires) of synthesized module (available only for Minispec)")
+    parser.add_argument("--paths", "-p", type=int, default=0, help="Report the N longest paths in the circuit")
     parser.add_argument("--names", "-n", default=False, action="store_true", help="Try to recover net names for gate outputs in the critical path (experimental, takes longer)")
     parser.add_argument("--rawnames", default=False, action="store_true", help="For Minispec circuits, skip type analysis and report raw wire names (type-enhanced wire names will be clearer, but this can be useful for debugging)")
     parser.add_argument("--retime", "-r", default=False, action="store_true", help="Enable retiming")
@@ -319,6 +320,8 @@ if __name__ == "__main__":
     #abcBaseData = "strash;fraig;refactor;balance;rewrite;refactor;balance;rewrite -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;if -g -K 8;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;if -g -K 12;refactor;balance;rewrite;rewrite -z;refactor -z;balance;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;if -g -K 8;refactor;balance;rewrite;rewrite -z;refactor -z;balance;rewrite -z;refactor -z;balance;logic;sop;strash;refactor;balance;rewrite;rewrite -z;refactor -z;balance;logic;sop;strash;if -g -K 8;refactor;balance;rewrite;if -x -K 12;rewrite -z;refactor -z;balance;if -y -K 6;refactor;balance;rewrite;rewrite -z;refactor -z;balance;" #+ resyn + "if -x -K 16;" + resyn2
 
     abcBaseData = "strash;$OPT;ifraig;map -D $DELAY -B 0.1;cleanup;$BUFFER;upsize -D $DELAY;dnsize -D $DELAY;stime -p;"
+    if args.paths != 0:
+        abcBaseData += "stime -a;"
     # NOTE: Removed dretime as it produced worse QoR; using retime -M4 which is just delay-optimal
     # TODO: Try retiming after mapping/$BUFFER/sizing. It seems to produce slightly better results,
     # however the 2nd call to ABC needs absolutely no buffers, so you need to follow a late retime
@@ -721,6 +724,120 @@ if __name__ == "__main__":
         print '%24s %8d %22.1f %22.1f %s' % (gateName, fanout, tpd, cumDelay, outName)
         lineNum += 1
     print '%24s %8s %22.1f %22.1f' % (bsvEndPoint, 0, 0.0, cumDelay)
+
+    if args.paths != 0:
+        # NOTE: For now, this analysis is independent of the normal
+        # critical-path report b/c it depends on gathering more info, which can
+        # get expensive, and because we're relying on a patched ABC. but
+        # there's a fair amount of duplication. Merge/dedup things eventually!
+        match = re.search('\+ stime -a (.*?) \+ write_blif', yosysOut, flags = re.MULTILINE | re.DOTALL)
+        if match == None:
+            print "ERROR: Path analysis not available"
+        else:
+            delayInfo = dict([(node, (delay, critFi, fos.strip())) for (delay, node, critFi, fos) in
+                re.findall("Dr =\s+(\S+).+?Name =\s+(\S+)\s+CritFI =\s+(\S+)\s+FOs =(.*)",
+                    match.group(1))])
+            if len(delayInfo) == 0:
+                print "ERROR: Node/CritFI/FOs info not available from ABC; make sure you're using a patched version of yosys-abc suitable for synth!"
+            else:
+                # Find inputs and outputs (in the ABC sense, i.e., including
+                # things ABC didn't see, like DFF and BRAM interfaces)
+                abcInputs = {}
+                abcOutputs = {}
+                for (node, (delay, critFi, fos)) in delayInfo.iteritems():
+                    if critFi not in delayInfo:
+                        abcInputs[critFi] = node
+                    for fo in fos.split(" "):
+                        if fo not in delayInfo:
+                            abcOutputs[fo] = node
+
+                blif = readFile(os.path.join(yosysOutDir, "out.blif"))
+                synonyms = re.findall(".names (\S+) (\S+)", blif)
+                
+                # Find the ABC node name for every non-ABC node name.
+                # Requires multiple passes due to non-ABC synonyms
+                nameToAbc = {}
+                leftovers = []
+                for (n1, n2) in synonyms:
+                    if n1.startswith("$abc"):
+                        (n2, n1) = (n1, n2)
+                    if not n2.startswith("$abc"):
+                        leftovers.append((n1, n2))
+                    else:
+                        (_, _, abcName) = n2.rpartition("$")
+                        nameToAbc[n1] = abcName
+                # Transitively get all non-ABC synonyms
+                while len(leftovers) > 0:
+                    nextLeftovers = []
+                    for (n1, n2) in leftovers:
+                        if n1 in nameToAbc:
+                            nameToAbc[n2] = nameToAbc[n1]
+                        elif n2 in nameToAbc:
+                            nameToAbc[n1] = nameToAbc[n2]
+                        else:
+                            nextLeftovers.append((n1, n2))
+                    if len(nextLeftovers) == len(leftovers):
+                        break # this gets rid of useless mappings, e.g., RDY signals to $true
+                        #print "ERROR: Path analysis: Incomplete BLIF output??"
+                        #sys.exit(-1)
+                    leftovers = nextLeftovers
+
+                # Gather the canonical I/O names for the purpose of prioritization
+                bm = re.search("\.inputs (.*)\n\.outputs (.*)\n", blif)
+                inputs = set(bm.group(1).strip().split(" "))
+                outputs = set(bm.group(2).strip().split(" "))
+                # Add all DFF to I/Os (as they are I/Os from ABC's perspective)
+                for (d, q, qn) in re.findall(".subckt DFF.*?D=(\S+)\s+Q=(\S+)\s+QN=(\S+)", blif):
+                    if d in nameToAbc:
+                        outputs.add(d)
+                    if q in nameToAbc:
+                        inputs.add(q)
+                    if qn in nameToAbc:
+                        inputs.add(qn)
+
+                # Sometimes a node has mutiple names. Prioritize names as follows:
+                def prio(name, isInput):
+                    if (isInput and name in inputs) or (not isInput and name in outputs):
+                        return 3 # right name for sure
+                    if "__h" in name[1:] or "__d" in name[1:] or "__q" in name[1:]:
+                        return 0 # internal node names
+                    if "$D_IN" in name:
+                        return 1 # Sometimes DFF inputs get this name, we want ...(DFF_in) name though
+                    return 2 # probably part of an internal interface, e.g., a BRAM
+
+                inNets = {}
+                outNodes = {}
+                for (name, abcName) in nameToAbc.iteritems():
+                    if abcName in abcInputs:
+                        if abcName not in inNets or prio(inNets[abcName], True) < prio(name, True):
+                            inNets[abcName] = name
+                    elif abcName in abcOutputs:
+                        abcNodeName = abcOutputs[abcName]
+                        if abcNodeName not in outNodes or prio(outNodes[abcNodeName], True) < prio(name, False):
+                            outNodes[abcNodeName] = name
+                
+                critOuts = list(reversed(sorted([(float(delay), net) for (net, (delay, _, _))
+                    in delayInfo.iteritems() if net in outNodes])))
+                if args.paths > 0 and args.paths < len(critOuts):
+                    critOuts = critOuts[:args.paths]
+                
+                print "\nLongest paths:"
+                print '%33s %22s %22s' % ('Start', 'End' , 'Delay')
+                print '%33s %22s %22s' % ('-----', '---' , '-----')
+                for (delay, out) in critOuts:
+                    outName = outNodes[out]
+                    cur = out
+                    while cur in delayInfo:
+                        cur = delayInfo[cur][1]
+                    inName = inNets[cur] if cur in inNets else cur
+                    if not isModule and cur in inNets:
+                        inName = inName[2:] # drop leading __
+                    if outName.startswith("$0\\"):
+                        outName = outName[3:] + "(DFF_in)"
+                    if msLayout != None:
+                        inName = msLayout.translate(inName)
+                        outName = msLayout.translate(outName)
+                    print '%33s %22s %22.1f' % (inName, outName, delay)
 
     if len(brams):
         print "\nArea breakdown (excluding memories):"

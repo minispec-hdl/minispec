@@ -1,0 +1,22 @@
+diff --git a/src/map/scl/sclSize.c b/src/map/scl/sclSize.c
+index ab3e3f3..1c1f14d 100644
+--- a/src/map/scl/sclSize.c
++++ b/src/map/scl/sclSize.c
+@@ -131,6 +131,17 @@ static inline void Abc_SclTimeNodePrint( SC_Man * p, Abc_Obj_t * pObj, int fRise
+     printf( "Cmax =%6.1f ff  ", pCell ? SC_CellPin(pCell, pCell->n_inputs)->max_out_cap : 0.0 );
+     printf( "G =%5d  ",         pCell ? (int)(100.0 * Abc_SclObjLoadAve(p, pObj) / SC_CellPinCapAve(pCell)) : 0 );
+ //    printf( "SL =%6.1f ps",     Abc_SclObjSlackMax(p, pObj, p->MaxDelay0) );
++    // dsm: Print additional information needed for longest-path report in synth
++    if (Abc_ObjIsNode(pObj)) {
++        printf( "Name = %s  ", Abc_ObjName(pObj) );
++        int fRise2 = fRise;
++        Abc_Obj_t * pCriticalFanin = Abc_SclFindMostCriticalFanin( p, &fRise2, pObj );
++        printf( "CritFI = %s  ", Abc_ObjName(pCriticalFanin) );
++        int i = 0; Abc_Obj_t * pFanout;
++        printf( "FOs =  ");
++        Abc_ObjForEachFanout( pObj, pFanout, i )
++            printf("%s ",  Abc_ObjName(pFanout));
++    }
+     printf( "\n" );
+ }
+ void Abc_SclTimeNtkPrint( SC_Man * p, int fShowAll, int fPrintPath )
