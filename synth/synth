@@ -813,7 +813,7 @@ if __name__ == "__main__":
                             inNets[abcName] = name
                     elif abcName in abcOutputs:
                         abcNodeName = abcOutputs[abcName]
-                        if abcNodeName not in outNodes or prio(outNodes[abcNodeName], True) < prio(name, False):
+                        if abcNodeName not in outNodes or prio(outNodes[abcNodeName], False) < prio(name, False):
                             outNodes[abcNodeName] = name
                 
                 critOuts = list(reversed(sorted([(float(delay), net) for (net, (delay, _, _))
