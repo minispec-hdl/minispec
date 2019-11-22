@@ -745,7 +745,7 @@ class Elaborator : public MinispecBaseListener {
         void enterRuleDef(MinispecParser::RuleDefContext* ctx) override { ic.enterMutableLevel(); }
         void enterFunctionDef(MinispecParser::FunctionDefContext* ctx) override { ic.enterMutableLevel(); }
         void enterBeginEndBlock(MinispecParser::BeginEndBlockContext* ctx) override { ic.enterMutableLevel(); }
-        void enterIfStmt(MinispecParser::IfStmtContext* ctx) override { ic.enterPoisoningLevel(); }
+        //void enterIfStmt(MinispecParser::IfStmtContext* ctx) override { ic.enterPoisoningLevel(); }
         void enterCaseStmt(MinispecParser::CaseStmtContext* ctx) override { ic.enterPoisoningLevel(); }
         void enterCaseExpr(MinispecParser::CaseExprContext* ctx) override { ic.enterPoisoningLevel(); } // TODO: Needed?
 
@@ -950,8 +950,17 @@ class Elaborator : public MinispecBaseListener {
         }
 
         // Elaboration of control structures
+        void enterIfStmt(MinispecParser::IfStmtContext* ctx) override {
+            // First, evaluate the condition
+            elaboratorWalker.walk(this, ctx->expression());
+            // If condition is known, this isn't a poisoning level
+            Any condValue = getValue(ctx->expression());
+            if (condValue.is<bool>()) ic.enterMutableLevel();
+            else ic.enterPoisoningLevel();
+        }
+
         void exitIfStmt(MinispecParser::IfStmtContext* ctx) override {
-            ic.exitLevel();  // was a poisoning level
+            ic.exitLevel();  // was a poisoning/normal level
             // If we know the condition at elab time, emit only the taken branch
             Any condValue = getValue(ctx->expression());
             if (condValue.is<bool>()) {
