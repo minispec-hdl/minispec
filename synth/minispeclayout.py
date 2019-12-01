@@ -162,8 +162,15 @@ class MinispecLayout:
                 else:
                     outputs[methodName] = methodType
                     if "(" in rest:
-                        for arg in _parseParens(rest)[0].split(","):
-                            (argType, argName) = _parseType(arg)
+                        args = _parseParens(rest)[0]
+                        # Parse args one by one, serially. We can't just split
+                        # by commas because args with parametric types may have
+                        # commas too. Instead, lop off 1st arg's type, then
+                        # if there's a comma in the rest, that is the separator
+                        # between the arg's name and the next arg
+                        while len(args) > 0:
+                            (argType, argsRest) = _parseType(args)
+                            (argName, _, args) = argsRest.partition(",")
                             inputs[methodName + "_" + argName] = argType
             
             # Post-process function I/Os to follow synth formatting conventions
