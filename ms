@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python2 -u
 # High-level minispec interface, mimics that of minispec Jupyter kernel
 # Author: Daniel Sanchez
 
