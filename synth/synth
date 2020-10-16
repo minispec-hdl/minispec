@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # $lic$
 # Copyright (C) 2018-2020 by Daniel Sanchez
@@ -141,9 +141,14 @@ def compileBsvModule(input, args):
 def sanitizeParametric(p):
     return p.replace("#", "_").replace(",", "_").replace("(", "").replace(")", "").replace(" ", "").replace("\t", "")
 
+# Thin wrapper around Popen
+def run_outerr(cmd):
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    (stdout, stderr) = p.communicate()
+    return (p.returncode, stdout, stderr)
 
 # Runs a command with fail-stop semantics, like make. If the program returns
-# successfully, run() returns stdout and stderr; on a failure, run() stops the
+# successfully, run() returns stdout; on a failure, run() stops the
 # program.
 def run(cmd, failMsg=None):
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -408,10 +413,19 @@ if __name__ == "__main__":
     def runYosys_finish(pd):
         (p, outDir) = pd
         run_finish(p)
-        abcOut = run("grep 'ABC: WireLoad' " + yosysOutFile(outDir))
+        (retcode, abcOut, abcErr) = run_outerr("grep 'ABC: WireLoad' " + yosysOutFile(outDir))
+        if retcode != 0:
+            (retcode, abcOut, abcErr) = run_outerr('grep "Don\'t call ABC as there is nothing to map." ' + yosysOutFile(outDir))
+            print (retcode, abcOut, abcErr)
+            if retcode == 0:
+                return ("0", "0", outDir)
+            else:
+                print "ERROR: Yosys output does not contain timing and area analysis"
+                sys.exit(1)
+
         match = re.search('ABC: WireLoad = "none" (.*)', abcOut)
         if not match:
-            print "ERROR: Yosys output does not contain timing and area analysis"
+            print "ERROR: Yosys output does not contain timing and area analysis, but grep didn't fail?"
             sys.exit(1)
 
         #print match.group(1)
@@ -453,6 +467,11 @@ if __name__ == "__main__":
         (delay, area, outDir) = runYosys_finish(p)
         results.append((float(delay), float(area), outDir))
     results.sort()
+    
+    if results[0][0] == 0.0 and results[0][1] == 0.0:
+        print "WARNING: Synthesized circuit has no logic; synthesis done"
+        # TODO: Refactor code so that we can print circuit if args.view
+        sys.exit(0)
 
     if results[0][0] >= args.delay:
         # If all designs above delay target, pick the smallest one
