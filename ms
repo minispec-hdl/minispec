@@ -4,15 +4,12 @@
 
 from subprocess import Popen, PIPE
 from tempfile import mkdtemp
-import os, re, select, signal, subprocess, sys
+import atexit, os, re, select, shutil, signal, subprocess, sys
 
 def writeFile(file, data):
     f = open(file, "w")
     f.write(data)
     f.close()
-
-tmpDir = mkdtemp(suffix="ms")
-userDir = os.getcwd()
 
 # Runs a command with fail-stop semantics, like make. If the program returns
 # successfully, run() returns stdout and stderr; on a failure, run() stops the
@@ -46,7 +43,7 @@ call any user-defined functions.
 
 Arguments must be quoted as needed to avoid being interpreted by the shell.
 For example,
-  ms eval log2(16) will cause an error dues to shell expanson on parentheses.
+  ms eval log2(16) will cause an error due to shell expansion on parentheses.
   ms eval "log2(16)" works correctly.
 Quotes are required for most expressions (e.g., ms eval "2'b101 + 3") and for
 parametric functions and modules (e.g., ms synth add.ms "add#(32)".
@@ -63,6 +60,8 @@ if len(args) < 2:
 cmd = args[1]
 cmdArgs = [] if len(args) < 3 else ["'" + a + "'" for a in args[2:]]
 if cmd == "eval":
+    tmpDir = mkdtemp(suffix="ms")
+    atexit.register(shutil.rmtree, tmpDir) # auto-remove tmpDir on exit
     if len(cmdArgs) == 0:
         print "error: need an expression to evaluate"
     elif len(cmdArgs) == 1:
@@ -97,16 +96,16 @@ elif cmd == "sim":
     if len(cmdArgs) < 2:
         print "error: need file and module arguments"
         sys.exit(1)
-    file = os.path.abspath(args[2])
+    file = args[2]
     print "Compiling module"
-    mscOut = decolorize(run("(cd %s && msc -o sim -p '%s' '%s' %s)" % (tmpDir, userDir, file, " ".join(cmdArgs[1:]))))
+    mscOut = decolorize(run("msc -o sim '%s' %s" % (file, " ".join(cmdArgs[1:]))))
     m = re.search("produced simulation executable (.*?)\n", mscOut)
     if m is None:
         print "error: msc didn't produce a simulation executable!?"
         sys.exit(1)
     execName = m.group(1)
     print "Simulating module"
-    sys.exit(os.system("(cd %s && ./%s)" % (tmpDir, execName)))
+    sys.exit(os.system("./%s" % execName))
 elif cmd == "synth":
     sys.exit(os.system("synth " + " ".join(cmdArgs)))
 elif cmd == "help":
