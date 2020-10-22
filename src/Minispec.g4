@@ -165,22 +165,21 @@ exprPrimary :
     | array=exprPrimary '[' msb=expression (':' lsb=expression)? ']' #sliceExpr
     | fcn=exprPrimary '(' (expression (',' expression)*)? ')' #callExpr
     | type '{' memberBinds '}' #structExpr
-    | beginEndBlock #blockExpr
     ;
 memberBinds : memberBind (',' memberBind)* ;
 memberBind : field=lowerCaseIdentifier ':' expression ;
 beginEndBlock : 'begin' stmt* 'end' ;
-regWrite : lhs=lvalue '<=' rhs=expression ;
+regWrite : lhs=lvalue '<=' rhs=expression ';' ;
 
 stmt :
      varDecl
     | varAssign
-    | regWrite ';'
+    | regWrite
     | beginEndBlock
     | ifStmt
     | caseStmt
     | forStmt
-    | expression ';'
+    | exprPrimary ';'
     ;
 
 ifStmt : 'if' '(' expression ')' stmt ('else' stmt)? ;
