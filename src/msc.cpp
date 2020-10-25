@@ -110,7 +110,7 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
         std::smatch hdrMatch;
         if (!std::regex_search(msg, hdrMatch, hdrRegex)) {
             // Special-case not-found top-level error
-            if (msg.find("Command line:") >= 0 && msg.find("Unbound variable `mk")) {
+            if (msg.find("Command line:") != std::string::npos && msg.find("Unbound variable `mk") != std::string::npos) {
                 bool isModule = isupper(topLevel[0]);
                 msg = errorColored("error:") + " cannot find top-level " + (isModule? "module" : "function") + " " + errorColored("'" + topLevel + "'");
                 reportMsg(isError, msg);
