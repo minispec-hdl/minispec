@@ -52,7 +52,7 @@ void reportBluespecOutput(std::string str, const SourceMap& sm, const std::strin
     // up in Bluespec output.
     const char* lineTerm = " _@%@_ ";
     replace(str, "\n", lineTerm);
-    std::regex evRegex("(Warning|Error): (.*?)(?=(Error:|Warning:|$))");
+    std::regex evRegex("(Warning|Error): (.*?)(?=( _@%@_ Error:| _@%@_ Warning:|$))");
 
     const std::string locRegexStr = "\"(\\S+)\",\\s+line\\s+(\\d+),\\s+column\\s+(\\d+)";
     std::regex locRegex(locRegexStr);
