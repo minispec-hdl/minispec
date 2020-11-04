@@ -12,6 +12,7 @@ simTargets = [
     ("loop", "TestAdd"),
     ("loop2", "TestCmp"),
     ("params", "TestParams"),
+    ("partialparams", "TestPartialParams"),
     ("recursion", "TestAdd"),
     ("recursion2", "TestAdd"),
     ("recursion3", "TestRecursion"),
