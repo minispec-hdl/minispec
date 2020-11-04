@@ -84,7 +84,7 @@ struct ParametricUse {
 typedef std::shared_ptr<ParametricUse> ParametricUsePtr;
 
 class Elaborator;
-typedef std::unordered_map<std::string, std::tuple<ParserRuleContext*, Elaborator*>> ParametricsMap;
+typedef std::unordered_map<std::string, std::vector<ParserRuleContext*>> ParametricsMap;
 
 namespace std {
     template<> struct hash<ParametricUse> {
@@ -605,6 +605,7 @@ class Elaborator : public MinispecBaseListener {
             reportErr(error.str(), "", error.getCtx());
         }
 
+    public:
         ParametricUsePtr createParametricUsePtr(const std::string& name, MinispecParser::ParamsContext* params) {
             auto res = std::make_shared<ParametricUse>();
             res->name = name;
@@ -671,7 +672,6 @@ class Elaborator : public MinispecBaseListener {
             return res;
         }
 
-    public:
         Any getValue(tree::ParseTree* ctx) const {
             auto it = elabValues.find(ctx);
             return (it != elabValues.end())? it->second : Any(nullptr);
@@ -1621,7 +1621,9 @@ class Elaborator : public MinispecBaseListener {
                     if (isConcrete(paramFormals)) {
                         elaboratorWalker.walk(this, stmt);
                     } else {
-                        parametrics[name] = std::make_tuple(defCtx, this);
+                        if (parametrics.find(name) == parametrics.end())
+                            parametrics[name] = {};
+                        parametrics[name].push_back(defCtx);
                         setValue(stmt, Skip());
                     }
                 } else {
@@ -1756,104 +1758,178 @@ SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*> p
             auto it = parametrics.find(p.name);
             // NOTE: Fail silently so we can use parametric uses for non-local parametric types
             if (it == parametrics.end()) continue; //error(parametric %s not found", p.name.c_str());
-
-            auto ctx = std::get<0>(it->second);
             if (elab.isParametricEmitted(p)) continue;
-
             registerElabStep(p, elabDepth);
-            std::vector<MinispecParser::ParamFormalContext*> paramFormals;
-            std::string paramType;
-            if (auto funcCtx = dynamic_cast<MinispecParser::FunctionDefContext*>(ctx)) {
-                paramFormals = funcCtx->functionId()->paramFormals()->paramFormal();
-                paramType = "function";
-            } else if (auto modCtx = dynamic_cast<MinispecParser::ModuleDefContext*>(ctx)) {
-                paramFormals = modCtx->moduleId()->paramFormals()->paramFormal();
-                paramType = "module";
-            } else if (auto typedefCtx = dynamic_cast<MinispecParser::TypeDefSynonymContext*>(ctx)) {
-                paramFormals = typedefCtx->typeId()->paramFormals()->paramFormal();
-                paramType = "typedef";
-            } else if (auto structCtx = dynamic_cast<MinispecParser::TypeDefStructContext*>(ctx)) {
-                paramFormals = structCtx->typeId()->paramFormals()->paramFormal();
-                paramType = "struct";
-            } else {
-                panic("unhandled parametric... did the grammar change? (%s)", p.name.c_str());
-            }
 
-            // Produce paramFormals string (we don't use getText() to avoid
-            // comments within paramFormals and have  our own whitespace rules)
-            assert(paramFormals.size());
-            std::stringstream paramFormalsSs;
-            for (uint32_t i = 0; i < paramFormals.size(); i++) {
-                if (i > 0) paramFormalsSs << ", ";
-                auto pf = paramFormals[i];
-                if (pf->intName) paramFormalsSs << "Integer " << pf->intName->getText();
-                else if (pf->typeName) paramFormalsSs << "type " << pf->typeName->getText();
-                else paramFormalsSs << pf->getText();  // it's a param
-            }
-            std::string defStr = p.name + "#(" + paramFormalsSs.str() + ")";
-
-            auto paramsErr = [&](const std::string& msg) {
-                std::stringstream ss;
-                std::string loc = emitCtx? getLoc(emitCtx) : "command-line arg";
-                ss << hlColored(loc + ":") << " "
-                    << errorColored(" error:") << " cannot instantiate "
-                    << errorColored("'" + p.str(true) + "'")
-                    << " from parametric " << paramType << " "
-                    << hlColored(defStr) << " defined at "
-                    << hlColored(getLoc(ctx)) << ": " << msg << "\n";
-                if (emitCtx) ss << contextStr(emitCtx);
-                reportErr(ss.str(), "", emitCtx);
+            auto getParamInfo = [](ParserRuleContext* ctx) -> std::tuple<std::vector<MinispecParser::ParamFormalContext*>, std::string> {
+                std::vector<MinispecParser::ParamFormalContext*> paramFormals;
+                std::string paramType;
+                if (auto funcCtx = dynamic_cast<MinispecParser::FunctionDefContext*>(ctx)) {
+                    paramFormals = funcCtx->functionId()->paramFormals()->paramFormal();
+                    paramType = "function";
+                } else if (auto modCtx = dynamic_cast<MinispecParser::ModuleDefContext*>(ctx)) {
+                    paramFormals = modCtx->moduleId()->paramFormals()->paramFormal();
+                    paramType = "module";
+                } else if (auto typedefCtx = dynamic_cast<MinispecParser::TypeDefSynonymContext*>(ctx)) {
+                    paramFormals = typedefCtx->typeId()->paramFormals()->paramFormal();
+                    paramType = "typedef";
+                } else if (auto structCtx = dynamic_cast<MinispecParser::TypeDefStructContext*>(ctx)) {
+                    paramFormals = structCtx->typeId()->paramFormals()->paramFormal();
+                    paramType = "struct";
+                } else {
+                    panic("unhandled parametric... did the grammar change? (%s)", ctx->getText().c_str());
+                }
+                return std::tie(paramFormals, paramType);
             };
 
-            // Bind params, produce params string
-            integerContext.enterImmutableLevel();
-            std::stringstream paramsSs;
-            if (p.params.size() != paramFormals.size()) {
-                paramsErr(std::to_string(paramFormals.size())
-                        + " parameter" + ((paramFormals.size() > 1)? "s" : "")
-                        + " required, " + std::to_string(p.params.size())
-                        + " given" );
-                continue;
-            }
-            bool paramMatchError = false;
-            for (uint32_t i = 0; i < paramFormals.size(); i++) {
-                auto paramFormal = paramFormals[i];
-                if (i > 0) paramsSs << ", ";
-                if (paramFormal->intName) {
-                    if (!p.params[i].is<int64_t>()) {
-                        paramsErr("parameter " + std::to_string(i + 1) + " is not an Integer");
-                        paramMatchError = true;
-                        continue;
+            auto specializedParams = [getParamInfo](ParserRuleContext* ctx) {
+                uint32_t s = 0;
+                auto [paramFormals, _] = getParamInfo(ctx);
+                for (auto pf: paramFormals)
+                    if (pf->param()) s++;
+                return s;
+            };
+
+            // Because we may have partially specialized parametrics, give
+            // parametrics with more specialized params higher priority
+            std::vector<ParserRuleContext*> ctxs = it->second;
+            std::stable_sort(ctxs.begin(), ctxs.end(),
+                    [specializedParams](ParserRuleContext* ctx1, ParserRuleContext* ctx2) {
+                        return specializedParams(ctx1) > specializedParams(ctx2);
+                    });
+
+            // We try to match against all ctxs, and produce errors on those
+            // that fail. If no match is found, we later emit those errors
+            std::vector<std::function<void()>> paramsErrs;
+            bool ctxMatched = false;
+
+            for (auto ctx : ctxs) {
+                auto [paramFormals, paramType] = getParamInfo(ctx);
+
+                // Produce paramFormals string (we don't use getText() to avoid
+                // comments within paramFormals and have our own whitespace rules)
+                assert(paramFormals.size());
+                std::stringstream paramFormalsSs;
+                for (uint32_t i = 0; i < paramFormals.size(); i++) {
+                    if (i > 0) paramFormalsSs << ", ";
+                    auto pf = paramFormals[i];
+                    if (pf->intName) paramFormalsSs << "Integer " << pf->intName->getText();
+                    else if (pf->typeName) paramFormalsSs << "type " << pf->typeName->getText();
+                    else paramFormalsSs << pf->getText();  // it's a param
+                }
+                std::string defStr = p.name + "#(" + paramFormalsSs.str() + ")";
+
+                bool ctxHasParamsErrs = false;
+                auto paramsErr = [&](const std::string& msg) {
+                    std::stringstream ss;
+                    std::string loc = emitCtx? getLoc(emitCtx) : "command-line arg";
+                    ss << hlColored(loc + ":") << " "
+                        << errorColored(" error:") << " cannot instantiate "
+                        << errorColored("'" + p.str(true) + "'")
+                        << " from parametric " << paramType << " "
+                        << hlColored(defStr) << " defined at "
+                        << hlColored(getLoc(ctx)) << ": " << msg << "\n";
+                    if (emitCtx) ss << contextStr(emitCtx);
+                    paramsErrs.push_back(std::bind(reportErr, ss.str(), "", emitCtx));
+                    ctxHasParamsErrs = true;
+                };
+
+                // Bind params, produce params string
+                integerContext.enterImmutableLevel();
+                std::stringstream paramsSs;
+                if (p.params.size() != paramFormals.size()) {
+                    paramsErr(std::to_string(paramFormals.size())
+                            + " parameter" + ((paramFormals.size() > 1)? "s" : "")
+                            + " required, " + std::to_string(p.params.size())
+                            + " given" );
+                    continue;
+                }
+                for (uint32_t i = 0; i < paramFormals.size(); i++) {
+                    auto paramFormal = paramFormals[i];
+                    if (i > 0) paramsSs << ", ";
+                    if (paramFormal->intName) {
+                        if (!p.params[i].is<int64_t>()) {
+                            paramsErr("parameter " + std::to_string(i + 1) + " is not an Integer");
+                            continue;
+                        }
+                        auto varName = paramFormal->intName->getText();
+                        integerContext.defineVar(varName, true);
+                        integerContext.set(varName, p.params[i].as<int64_t>());
+                        paramsSs << varName << " = " << p.params[i].as<int64_t>();
+                    } else if (paramFormal->typeName) {
+                        if (!p.params[i].is<ParametricUsePtr>()) {
+                            paramsErr("parameter " + std::to_string(i + 1) + " is not a type");
+                            continue;
+                        }
+                        auto typeName = paramFormal->typeName->getText();
+                        integerContext.setType(typeName, p.params[i].as<ParametricUsePtr>());
+                        paramsSs << typeName << " = " << p.params[i].as<ParametricUsePtr>()->str(/*alreadyEscaped=*/true);
+                    } else {
+                        auto pfParam = paramFormal->param();
+                        assert(pfParam);
+                        // We're constantly clearing values from params, so re-elaborate
+                        elab.clearValues(pfParam);
+                        elaboratorWalker.walk(&elab, pfParam);
+                        
+                        auto sameVals = [](Any v1, Any v2) {
+                            if (v1.is<int64_t>() && v2.is<int64_t>())
+                                return v1.as<int64_t>() == v2.as<int64_t>();
+                            if (v1.is<ParametricUsePtr>() && v2.is<ParametricUsePtr>())
+                                return *v1.as<ParametricUsePtr>() == *v2.as<ParametricUsePtr>();
+                            return false;
+                        };
+
+                        auto valueStr = [](Any v) {
+                            if (v.is<int64_t>()) return std::to_string(v.as<int64_t>());
+                            else if (v.is<ParametricUsePtr>()) return v.as<ParametricUsePtr>()->str(/*alreadyEscaped=*/true);
+                            else panic("Unexpected parametric value");
+                        };
+
+                        Any pv = p.params[i];
+                        Any ppv = elab.getValue(pfParam);
+                        if (!ppv.is<int64_t>()) {
+                            ppv = elab.createParametricUsePtr(pfParam->type()->name->getText(), pfParam->type()->params());
+                        }
+                        if (!sameVals(pv, ppv)) {
+                            paramsErr("parameter " + std::to_string(i + 1) + " (" + valueStr(pv) +
+                                    ") does not match specialized parameter (" + valueStr(ppv) + ")");
+                            continue;
+                        }
                     }
-                    auto varName = paramFormal->intName->getText();
-                    integerContext.defineVar(varName, true);
-                    integerContext.set(varName, p.params[i].as<int64_t>());
-                    paramsSs << varName << " = " << p.params[i].as<int64_t>();
-                } else if (paramFormal->typeName) {
-                    if (!p.params[i].is<ParametricUsePtr>()) {
-                        paramsErr("parameter " + std::to_string(i + 1) + " is not a type");
-                        paramMatchError = true;
-                        continue;
-                    }
-                    auto typeName = paramFormal->typeName->getText();
-                    integerContext.setType(typeName, p.params[i].as<ParametricUsePtr>());
-                    paramsSs << typeName << " = " << p.params[i].as<ParametricUsePtr>()->str(/*alreadyEscaped=*/true);
+                }
+
+                if (!ctxHasParamsErrs) {
+                    ctxMatched = true;
+                    std::string paramInfo = paramType  + " " + hlColored(defStr) +
+                        " with " + noteColored(paramsSs.str());
+
+                    elab.clearValues(ctx);
+                    elaboratorWalker.walk(&elab, ctx);
+                    integerContext.exitLevel();
+                    tc.emitStart(ctx);
+                    tc.emitLine();
+                    tc.emitLine(ctx);
+                    tc.emitEnd(paramInfo);
+                    break;
                 } else {
-                    paramsErr("partially specialized parametrics not yet allowed");
+                    integerContext.exitLevel();
                 }
             }
-            if (paramMatchError) continue;
 
-            std::string paramInfo = paramType  + " " + hlColored(defStr) +
-                " with " + noteColored(paramsSs.str());
-
-            elab.clearValues(ctx);
-            elaboratorWalker.walk(&elab, ctx);
-            integerContext.exitLevel();
-            tc.emitStart(ctx);
-            tc.emitLine();
-            tc.emitLine(ctx);
-            tc.emitEnd(paramInfo);
+            if (!ctxMatched) {
+                // Dump all errors, and summarize the failure to match any if > 1 parametric
+                if (ctxs.size() > 1) {
+                    std::stringstream ss;
+                    std::string loc = emitCtx? getLoc(emitCtx) : "command-line arg";
+                    ss << hlColored(loc + ":") << " "
+                        << errorColored(" error:") << " cannot instantiate "
+                        << errorColored("'" + p.str(true) + "'")
+                        << " from any of " << ctxs.size() << " parametric definitions\n";
+                    if (emitCtx) ss << contextStr(emitCtx);
+                    reportErr(ss.str(), "", emitCtx);
+                }
+                for (auto err : paramsErrs) err();
+            }
         }
     }
     
