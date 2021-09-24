@@ -45,7 +45,7 @@ if not os.path.exists(antlrLib):
 allSrcs = [f for d, _, _ in os.walk("src") for f in Glob(d + "/*")]
 versionFile = os.path.join(buildDir, "version.inc")
 env.Command(versionFile, allSrcs + [".git/index", "SConstruct"],
-    'echo "const std::string version = \\"`python misc/gitver.py`, built on `date`\\";" >>' + versionFile)
+    'echo "const std::string version = \\"`python3 misc/gitver.py`, built on `date`\\";" >>' + versionFile)
 # Recent scons versions have added "improved cycle detection logic" that flags
 # a circular dep on versionFile. Looks like this is because scons does not
 # distinguish between .cpp and .o dependences, so e.g., build/version.inc deps
