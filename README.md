@@ -38,6 +38,10 @@ up` from the minispec root folder in your host. This will provision an Ubuntu
 18.04 VM with all dependencies, and build the minispec compiler (`msc`). Then,
 run `vagrant ssh` to log into the VM.
 
+The VM also installs Jupyter notebook with the Minispec kernel. Within the VM,
+run `jupyter notebook --ip=0.0.0.0` to launch the notebook. You can access it
+from the host at http://127.0.0.1:8888 (port forwarding is already configured).
+
 **Dependencies:**
 
 * Bluespec (`bsc`) version 2021.07 (build 4cac6eb).

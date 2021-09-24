@@ -67,7 +67,13 @@ Vagrant.configure("2") do |config|
     apt-get -y install python-pip
     if [ ! -d ~vagrant/notebook-5.7.8 ]; then
       pip install --upgrade setuptools pip
+      # Install jupyter notebook with minispec syntax patch
       sudo -H -u vagrant /vagrant/jupyter/install-jupyter.sh
+      # Link minispec kernel so it can be used as a module
+      # (alternatively, change kernel def to include full path to minispeckerenel.py)
+      ln -s /vagrant/jupyter/minispeckernel.py /usr/local/lib/python2.7/dist-packages/
+      # Install minispec jupyter kernel
+      jupyter kernelspec install /vagrant/jupyter/kernel/minispec/
     fi
 
     # Finally, build minispec itself (note: in shared folder... might want to
