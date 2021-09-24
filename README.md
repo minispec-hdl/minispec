@@ -24,7 +24,7 @@ learning curve. Key simplifications over Bluespec include:
 Copyright & License
 -------------------
 
-Copyright (C) 2019 by Daniel Sanchez
+Copyright (C) 2019-2021 by Daniel Sanchez
 
 Minispec is free software; you can redistribute it and/or modify it under the
 terms of the GNU General Public License as published by the Free Software
@@ -40,10 +40,12 @@ run `vagrant ssh` to log into the VM.
 
 **Dependencies:**
 
-* Bluespec (`bsc`) version 2016.07.beta1 (build 34806, 2016-07-05).
-  *Note: It is important to use this exact version. The Minispec compiler
-  parses `bsc` output, which may change across versions. Using a different
-  version is likely to make error reporting wonky.*
+* Bluespec (`bsc`) version 2021.07 (build 4cac6eb).
+  *Note: It is important to use a compatible version of `bsc`. The Minispec
+  compiler parses `bsc` output, which may change across versions. In practice,
+  `bsc` output stays relatively stable across versions, so bsc-2016.07.beta1
+  and earlier open-source versions should work well. However, a different
+  version may make make error reporting wonky.*
 
 * A C++17 compiler (tested with `gcc 8.2`).
 

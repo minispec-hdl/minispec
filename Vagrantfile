@@ -35,18 +35,16 @@ Vagrant.configure("2") do |config|
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 800 --slave /usr/bin/g++ g++ /usr/bin/g++-8
 
     # Download bsc
-    BSVER=Bluespec-2016.07.beta1
+    BSVER="bsc-2021.07-ubuntu-18.04"
+    BSREL="2021.07"
     if [ ! -d ~vagrant/${BSVER} ]; then
-      echo "Downloading ${BSVER}"
-      sudo -u vagrant wget -nc -nv https://projects.csail.mit.edu/zsim/bsv/${BSVER}.tar.gz
+      echo "Downloading bsc ${BSREL} / ${BSVER}"
+      sudo -u vagrant wget -nc -nv https://github.com/B-Lang-org/bsc/releases/download/${BSREL}/${BSVER}.tar.gz
       sudo -u vagrant tar xzf ${BSVER}.tar.gz
-      sudo -u vagrant cp /usr/lib/x86_64-linux-gnu/libgmp.so.10 ${BSVER}/libgmp.so.3
       echo "# Bluespec config" >> ~vagrant/.bashrc
-      echo 'export BSPATH=\$HOME/'${BSVER} >> ~vagrant/.bashrc
+      echo 'BSPATH=\$HOME/'${BSVER} >> ~vagrant/.bashrc
       echo 'export BLUESPECDIR=\$BSPATH/lib' >> ~vagrant/.bashrc
-      echo 'export LD_LIBRARY_PATH=\$BSPATH:\$LD_LIBRARY_PATH' >> ~vagrant/.bashrc
       echo 'export PATH=\$BSPATH/bin:\$PATH' >> ~vagrant/.bashrc
-      echo 'export LM_LICENSE_FILE=<fill in license server info>' >> ~vagrant/.bashrc
     fi
 
     # Yosys
