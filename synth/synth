@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
 # $lic$
 # Copyright (C) 2018-2020 by Daniel Sanchez
@@ -39,7 +39,7 @@ def parseBsvFuncStr(funcStr):
         if loc >= 0:
             funcStr = funcStr[:loc].strip()
     if funcStr[-1] != ")":
-        print "WARN: Could not parse function %s; (no closing parenthesis)" % funcStr
+        print("WARN: Could not parse function %s; (no closing parenthesis)" % funcStr)
         return None
     # Find matching open parenthesis denoting start of arguments
     pos = len(funcStr) - 1
@@ -51,7 +51,7 @@ def parseBsvFuncStr(funcStr):
             if depth == 0: break
             pos -= 1
     except:
-        print "WARN: Could not parse function %s; (unmatched parentheses)" % funcStr
+        print("WARN: Could not parse function %s; (unmatched parentheses)" % funcStr)
         return None
 
     # Return type may have whitespace, but function name should be a single word
@@ -61,7 +61,7 @@ def parseBsvFuncStr(funcStr):
     funcArgs = funcStr[pos+1:-1].strip()
     for (val, name) in [(retType, "return type"), (funcName, "function name"), (funcArgs, "arguments")]:
         if len(val) == 0:
-            print "WARN: Could not parse function %s; (missing %s)" % (funcStr, name)
+            print("WARN: Could not parse function %s; (missing %s)" % (funcStr, name))
             return None
 
     # Each arg type / name is parsed just like the return arg / function name
@@ -69,7 +69,7 @@ def parseBsvFuncStr(funcStr):
     for arg in funcArgs.split(","):
         (argType, _, argName) = arg.strip().rpartition(" ")
         if len(argType) == 0:
-            print "WARN: Could not parse arg %s in function %s; (missing type or name)" % (arg, funcStr)
+            print("WARN: Could not parse arg %s in function %s; (missing type or name)" % (arg, funcStr))
             return None
         argList.append((argType, argName))
 
@@ -91,7 +91,7 @@ def compileBsvFunction(input, args):
         return False
 
     (retType, funcName, argList) = targetFunc
-    print "Synthesizing  function %s %s(%s)  from file %s" % (retType, funcName, ", ".join("%s %s" % arg for arg in argList), args.file)
+    print("Synthesizing  function %s %s(%s)  from file %s" % (retType, funcName, ", ".join("%s %s" % arg for arg in argList), args.file))
     methodName = funcName + "_"
 
     # Produce the synthesis wrapper
@@ -111,7 +111,7 @@ def compileBsvFunction(input, args):
     wrapperFile = os.path.join(args.synthdir, "synth_" + funcName + ".bsv")
     writeFile(wrapperFile, wrapperData, "synthesis wrapper")
 
-    print "Compiling Bluespec module"
+    print("Compiling Bluespec module")
     run("bsc -aggressive-conditions +RTS -K16M -RTS -bdir %s -info-dir %s -verilog -u -g mkSynth %s " % (args.synthdir, args.synthdir, wrapperFile))
     return targetFunc
 
@@ -130,10 +130,10 @@ def compileBsvModule(input, args):
     if not found:
         return False
 
-    print "Synthesizing module %s from file %s" % (modName, args.file)
+    print("Synthesizing module %s from file %s" % (modName, args.file))
     modFile = args.file
 
-    print "Compiling Bluespec module"
+    print("Compiling Bluespec module")
     run("bsc -aggressive-conditions +RTS -K16M -RTS -bdir %s -info-dir %s -vdir %s -show-module-use -verilog -u -g %s %s" % (args.synthdir, args.synthdir, args.synthdir, modName, modFile),
             "Bluespec compilation failed. Make sure your module is functionally correct.")
     return True
@@ -145,7 +145,7 @@ def sanitizeParametric(p):
 def run_outerr(cmd):
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (stdout, stderr) = p.communicate()
-    return (p.returncode, stdout, stderr)
+    return (p.returncode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
 # Runs a command with fail-stop semantics, like make. If the program returns
 # successfully, run() returns stdout; on a failure, run() stops the
@@ -154,13 +154,13 @@ def run(cmd, failMsg=None):
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (stdout, stderr) = p.communicate()
     if p.returncode == 0:
-        return stdout
+        return stdout.decode("utf-8")
     else:
-        print "ERROR: %s failed with error code %d" % (cmd, p.returncode)
-        for line in stderr.split("\n"):
-            print "    ", line
+        print("ERROR: %s failed with error code %d" % (cmd, p.returncode))
+        for line in stderr.decode("utf-8").split("\n"):
+            print("    ", line)
         if failMsg:
-            print failMsg
+            print(failMsg)
         sys.exit(1)
 
 # Async version
@@ -172,24 +172,24 @@ def run_finish(rtp):
     (p, cmd, failMsg) = rtp
     (stdout, stderr) = p.communicate()
     if p.returncode == 0:
-        return stdout
+        return stdout.decode("utf-8")
     else:
-        print "ERROR: %s failed with error code %d" % (cmd, p.returncode)
-        for line in stderr.split("\n"):
-            print "    ", line
+        print("ERROR: %s failed with error code %d" % (cmd, p.returncode))
+        for line in stderr.decode("utf-8").split("\n"):
+            print("    ", line)
         if failMsg:
-            print failMsg
+            print(failMsg)
         sys.exit(1)
 
 def run_geterr(rtp):
     (p, cmd, failMsg) = rtp
     (stdout, stderr) = p.communicate()
     if p.returncode != 0:
-        return stderr
+        return stderr.decode("utf-8")
     else:
-        print "ERROR: %s completed successfully when it should have failed" % (cmd,)
+        print("ERROR: %s completed successfully when it should have failed" % (cmd,))
         if failMsg:
-            print failMsg
+            print(failMsg)
         sys.exit(1)
 
 # Read data from file with fail-stop semantics
@@ -199,7 +199,7 @@ def readFile(file, descr = None):
         data = f.read()
         f.close()
     except:
-        print "Could not read%s file %s" % ((" " + descr) if descr else "", file)
+        print("Could not read%s file %s" % ((" " + descr) if descr else "", file))
         sys.exit(1)
     return data
 
@@ -210,7 +210,7 @@ def writeFile(file, data, descr):
         f.write(data)
         f.close()
     except:
-        print "Could not write to %s file %s" % (descr, file)
+        print("Could not write to %s file %s" % (descr, file))
         sys.exit(1)
 
 
@@ -232,13 +232,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.names and args.retime:
-        print "ERROR: Options --names/-n and --retime/-r cannot be simultaneously enabled."
+        print("ERROR: Options --names/-n and --retime/-r cannot be simultaneously enabled.")
         sys.exit(1)
 
     scriptDir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
     if not os.path.exists(args.synthdir):
-        print "Creating synthesis directory"
+        print("Creating synthesis directory")
         os.makedirs(args.synthdir)
     else:
         # Clean up all files, as multi-module builds sometimes get stale data otherwise
@@ -249,7 +249,7 @@ if __name__ == "__main__":
     bsvBaseLibPath = bscArgs.split("  -i ")[1].split("\n")[0].strip()
     bsvLibPath = os.path.join(bsvBaseLibPath, "Verilog")
     if not os.path.exists(bsvLibPath):
-        print "Found Bluespec compiler, but component library is not at %s. Do you have a non-standard Bluespec installation?" % (bsvLibPath,)
+        print("Found Bluespec compiler, but component library is not at %s. Do you have a non-standard Bluespec installation?" % (bsvLibPath,))
         sys.exit(1)
 
     # Since we run async subprocesses, set PDEATHSIG so we don't leave stray
@@ -259,14 +259,14 @@ if __name__ == "__main__":
         libc = ctypes.cdll.LoadLibrary('libc.so.6')
         libc.prctl(1, 15) # PR_SET_PDEATHSIG, SIGTERM
     except:
-        print "WARN: Could not prctl()"
+        print("WARN: Could not prctl()")
 
     isMinispec = args.file.endswith(".ms")
     isModule = False
     if isMinispec:
         # Minispec: just use msc output
         isModule = args.target[0].isupper()
-        print "Compiling %s %s from file %s" % ("module" if isModule else "function", args.target, args.file)
+        print("Compiling %s %s from file %s" % ("module" if isModule else "function", args.target, args.file))
         run("(cd %s && msc -o v,bsv %s '%s')" % (args.synthdir, os.path.abspath(args.file), args.target))
         modName = "mk" + args.target.strip() if "#" not in args.target else "mkTopLevel___"
     else:
@@ -284,20 +284,20 @@ if __name__ == "__main__":
         else:
             targetFunc = compileBsvFunction(input, args)
             if not targetFunc:
-                print "Target (function/module) %s not found in %s" % (args.target, args.file)
+                print("Target (function/module) %s not found in %s" % (args.target, args.file))
                 sys.exit(1)
             (_, _, _) = targetFunc
         modName = args.target.strip() if isModule else "mkSynth"
 
     stdcellFile = os.path.join(scriptDir, args.lib + ".lib")
     if not os.path.exists(stdcellFile):
-        print "ERROR: Standard cell library", args.lib, "does not exist"
+        print("ERROR: Standard cell library", args.lib, "does not exist")
         sys.exit(1)
 
     vizLibs = ["basic", "extended", "multisize"]
     vizLibsStr = ", ".join(vizLibs[:-1]) + ", and " + vizLibs[-1]
     if args.view and args.lib not in vizLibs:
-        print "ERROR: Visualization is only available with the %s standard cell libraries (you selected '%s')" % (vizLibsStr, args.lib)
+        print("ERROR: Visualization is only available with the %s standard cell libraries (you selected '%s')" % (vizLibsStr, args.lib))
         sys.exit(1)
 
     postCmds = ""
@@ -306,7 +306,7 @@ if __name__ == "__main__":
         postCmds = "read_verilog %s\nwrite_json %s" % (verilogStdcellFile, "$OUTDIR/synth.json")
 
     if args.delay <= 0:
-        print "ERROR: FTL logic not available, specify a positive target delay"
+        print("ERROR: FTL logic not available, specify a positive target delay")
         sys.exit(1)
 
     # Produce synthesis scripts
@@ -333,7 +333,7 @@ if __name__ == "__main__":
         # Since -O0 params occasionally outperform -O1 (esp. on small circuits), include both
         optCfgs = [("ox", "balance -x"), ("ob", resyn + "if -x;" + resyn2 + "if -x;balance -x;" + resyn2)]
     else:
-        print "ERROR: Optimization level can be 0 or 1 only, specified invalid value %d" % args.optLevel
+        print("ERROR: Optimization level can be 0 or 1 only, specified invalid value %d" % args.optLevel)
         sys.exit(-1)
 
     # -O2 candidate: More serious optimization, obscures algorithmic tradeoffs; apply with care
@@ -377,7 +377,7 @@ if __name__ == "__main__":
         POST = postCmds
     )
 
-    print "Synthesizing circuit with std cell library = %s, O%d, target delay = %d ps" % (args.lib, args.optLevel, args.delay)
+    print("Synthesizing circuit with std cell library = %s, O%d, target delay = %d ps" % (args.lib, args.optLevel, args.delay))
 
     # Buffer insertion is not delay-aware and finicky, so synthesize the circuit using a few settings and pick the best
     bufferCfgs = [("nb", ""), ("b", "buffer"), ("b50", "buffer -N 50")]
@@ -416,16 +416,16 @@ if __name__ == "__main__":
         (retcode, abcOut, abcErr) = run_outerr("grep 'ABC: WireLoad' " + yosysOutFile(outDir))
         if retcode != 0:
             (retcode, abcOut, abcErr) = run_outerr('grep "Don\'t call ABC as there is nothing to map." ' + yosysOutFile(outDir))
-            print (retcode, abcOut, abcErr)
+            print((retcode, abcOut, abcErr))
             if retcode == 0:
                 return ("0", "0", outDir)
             else:
-                print "ERROR: Yosys output does not contain timing and area analysis"
+                print("ERROR: Yosys output does not contain timing and area analysis")
                 sys.exit(1)
 
         match = re.search('ABC: WireLoad = "none" (.*)', abcOut)
         if not match:
-            print "ERROR: Yosys output does not contain timing and area analysis, but grep didn't fail?"
+            print("ERROR: Yosys output does not contain timing and area analysis, but grep didn't fail?")
             sys.exit(1)
 
         #print match.group(1)
@@ -469,7 +469,7 @@ if __name__ == "__main__":
     results.sort()
     
     if results[0][0] == 0.0 and results[0][1] == 0.0:
-        print "WARNING: Synthesized circuit has no logic; synthesis done"
+        print("WARNING: Synthesized circuit has no logic; synthesis done")
         # TODO: Refactor code so that we can print circuit if args.view
         sys.exit(0)
 
@@ -478,8 +478,7 @@ if __name__ == "__main__":
         yosysOutDir = results[0][2]
     else:
         # Pick smallest-area design that meets delay target
-        candidates = [(area, delay, outDir) for (delay, area, outDir) in results if delay <= args.delay]
-        candidates.sort()
+        candidates = sorted([(area, delay, outDir) for (delay, area, outDir) in results if delay <= args.delay])
         yosysOutDir = candidates[0][2]
 
     #print results, yosysOutDir
@@ -488,7 +487,7 @@ if __name__ == "__main__":
     # Parse the relevant components
     match = re.search('ABC: WireLoad = "none" (.*?) write_blif', yosysOut, flags = re.MULTILINE | re.DOTALL)
     if not match:
-        print "ERROR: Yosys output does not contain timing and area analysis"
+        print("ERROR: Yosys output does not contain timing and area analysis")
         sys.exit(1)
     anlLines = match.group(1).split("\n")
 
@@ -571,7 +570,7 @@ if __name__ == "__main__":
 
     match = re.search('Printing statistics.(.*?)Executing BLIF backend.', yosysOut, flags = re.MULTILINE | re.DOTALL)
     if not match:
-        print "ERROR: Yosys output does not contain timing and area analysis"
+        print("ERROR: Yosys output does not contain timing and area analysis")
         sys.exit(1)
 
     # Parse areas directly from lib file
@@ -636,11 +635,11 @@ if __name__ == "__main__":
     areaPerBit = 0.412
     totalBramArea = totalBramBits * areaPerBit
 
-    print "\nGates:", totalCells
-    print "Area: %.2f um^2" % (totalGateArea + totalBramArea,)
-    print "Critical-path delay:", delay, ("ps" if not isModule else "ps (not including setup time of endpoint flip-flop)")
+    print("\nGates:", totalCells)
+    print("Area: %.2f um^2" % (totalGateArea + totalBramArea,))
+    print("Critical-path delay:", delay, ("ps" if not isModule else "ps (not including setup time of endpoint flip-flop)"))
 
-    print "\nCritical path: %s -> %s" % (bsvStartPoint, bsvEndPoint)
+    print("\nCritical path: %s -> %s" % (bsvStartPoint, bsvEndPoint))
 
     if args.names:
         # The works: Parse input, undressed, and dressed BLIF files to map
@@ -677,7 +676,7 @@ if __name__ == "__main__":
         parsePorts = lambda s: s.strip().replace("\\", "").split()
         undressedPorts = set(parsePorts(m.group(1)) + parsePorts(m.group(2)))
 
-        print yosysOutDir
+        print(yosysOutDir)
         for (uLine, dLine) in zip(undressedLines, dressedLines):
             #print uLine, dLine
             if len(uLine) == 0: continue
@@ -718,7 +717,7 @@ if __name__ == "__main__":
                 outNodeToVar[outIdx] = "~" + inNodeToVar[inIdx]
             else:
                 unmatched += 1
-        print "Name mapping done, %d matched / % d unmatched" % (len(outNodeToVar), unmatched)
+        print("Name mapping done, %d matched / % d unmatched" % (len(outNodeToVar), unmatched))
 
     def printCols(widths, *vals):
         assert len(widths) == len(vals)
@@ -733,7 +732,7 @@ if __name__ == "__main__":
             if i > 0:
                 spaces += 1 # inter-col spacing
             line += " " * spaces + s
-        print line
+        print(line)
 
     # Formats for each of the reports
     def printTiming(*vals):
@@ -799,19 +798,19 @@ if __name__ == "__main__":
         # there's a fair amount of duplication. Merge/dedup things eventually!
         match = re.search('\+ stime -a (.*?) \+ write_blif', yosysOut, flags = re.MULTILINE | re.DOTALL)
         if match == None:
-            print "ERROR: Path analysis not available"
+            print("ERROR: Path analysis not available")
         else:
             delayInfo = dict([(node, (delay, critFi, fos.strip())) for (delay, node, critFi, fos) in
                 re.findall("Dr =\s+(\S+).+?Name =\s+(\S+)\s+CritFI =\s+(\S+)\s+FOs =(.*)",
                     match.group(1))])
             if len(delayInfo) == 0:
-                print "ERROR: Node/CritFI/FOs info not available from ABC; make sure you're using a patched version of yosys-abc suitable for synth!"
+                print("ERROR: Node/CritFI/FOs info not available from ABC; make sure you're using a patched version of yosys-abc suitable for synth!")
             else:
                 # Find inputs and outputs (in the ABC sense, i.e., including
                 # things ABC didn't see, like DFF and BRAM interfaces)
                 abcInputs = {}
                 abcOutputs = {}
-                for (node, (delay, critFi, fos)) in delayInfo.iteritems():
+                for (node, (delay, critFi, fos)) in delayInfo.items():
                     if critFi not in delayInfo:
                         abcInputs[critFi] = node
                     for fo in fos.split(" "):
@@ -882,7 +881,7 @@ if __name__ == "__main__":
 
                 inNets = {}
                 outNodes = {}
-                for (name, abcName) in nameToAbc.iteritems():
+                for (name, abcName) in nameToAbc.items():
                     if abcName in abcInputs:
                         if abcName not in inNets or prio(inNets[abcName], True) < prio(name, True):
                             inNets[abcName] = name
@@ -892,11 +891,11 @@ if __name__ == "__main__":
                             outNodes[abcNodeName] = name
                 
                 critOuts = list(reversed(sorted([(float(delay), net) for (net, (delay, _, _))
-                    in delayInfo.iteritems() if net in outNodes])))
+                    in delayInfo.items() if net in outNodes])))
                 if args.paths > 0 and args.paths < len(critOuts):
                     critOuts = critOuts[:args.paths]
                 
-                print "\nLongest paths:"
+                print("\nLongest paths:")
                 printPath("Start", "End", "Delay")
                 printPath('-----', '---', '-----')
                 for (delay, out) in critOuts:
@@ -915,9 +914,9 @@ if __name__ == "__main__":
                     printPath(inName, outName, "%.1f" % delay)
 
     if len(brams):
-        print "\nArea breakdown (excluding memories):"
+        print("\nArea breakdown (excluding memories):")
     else:
-        print "\nArea breakdown:"
+        print("\nArea breakdown:")
     printArea("Gate type", "Gates" , "Area/gate (um^2)", "Area/type (um^2)")
     printArea("---------", "-----" , "----------------", "----------------")
     for (cellName, cellCount, cellArea, typeArea) in cellStats:
@@ -931,7 +930,7 @@ if __name__ == "__main__":
     printArea("Total", totalCells, "", "%.3f" % totalGateArea)
 
     if len(brams):
-        print "\nMemories used:"
+        print("\nMemories used:")
         printMem("Name", "Words" , "Word bits", "Total bits", "Approx. Area (um^2)")
         printMem("----", "-----" , "---------", "----------", "-------------------")
         for (name, words, wordsize) in sorted(brams):
@@ -940,14 +939,14 @@ if __name__ == "__main__":
         printMem("Total", "", "", totalBramBits, "%.3f" % totalBramArea)
 
     if args.interface and msLayout == None:
-        print "ERROR: Cannot report circuit interface (-i/--interface option) because type analysis information is unavailable; Either this is not a Minispec circuit, or type analysis was turned off (e.g., through --rawnames)"
+        print("ERROR: Cannot report circuit interface (-i/--interface option) because type analysis information is unavailable; Either this is not a Minispec circuit, or type analysis was turned off (e.g., through --rawnames)")
     elif args.interface:
         def printIOs(ioDict):
             printInterface("Name", "Type" , "Bits")
             printInterface("----", "----" , "----")
             totalBits = 0
             totalBitsUnknown = False
-            for (name, type) in sorted(ioDict.iteritems()):
+            for (name, type) in sorted(ioDict.items()):
                 bits = msLayout.getWidth(type)
                 bitsStr = str(bits)
                 if bits == -1:
@@ -958,9 +957,9 @@ if __name__ == "__main__":
             totalBitsStr = "Unknown" if totalBitsUnknown else str(totalBits)
             printInterface("Total", "", totalBitsStr)
 
-        print "\nCircuit inputs:"
+        print("\nCircuit inputs:")
         printIOs(msLayout.inputs)
-        print "\nCircuit outputs:"
+        print("\nCircuit outputs:")
         printIOs(msLayout.outputs)
 
     if args.view:
@@ -1004,6 +1003,6 @@ if __name__ == "__main__":
         diagramFile = sanitizeParametric(args.target) + ".svg"
         skinFile = os.path.join(scriptDir, "gates.svg")
         run("netlistsvg %s -o %s --skin %s" % (jsonFile, diagramFile, skinFile))
-        print "\nProduced circuit diagram in %s" % (diagramFile,)
+        print("\nProduced circuit diagram in %s" % (diagramFile,))
 
-    print "\nSynthesis complete"
+    print("\nSynthesis complete")

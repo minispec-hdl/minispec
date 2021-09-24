@@ -152,7 +152,7 @@ class MinispecLayout:
                     realMkName = _formatType(modBody.split("<-")[1].split(";")[0].strip())
                 isFunction = realMkName[2].islower()
         if topLevelIfc is None:
-            print "ERROR: Top-level module", topLevelModule, "not found in generated BSV!?"
+            print("ERROR: Top-level module", topLevelModule, "not found in generated BSV!?")
             sys.exit(-1)
 
         regs = dict(getRegs(topLevelIfc))
@@ -274,7 +274,7 @@ class MinispecLayout:
             return res
 
         # Refine unresolved types
-        u = getUnresolvedTypes() + regs.values() + inputs.values() + outputs.values()
+        u = getUnresolvedTypes() + list(regs.values()) + list(inputs.values()) + list(outputs.values())
         while len(u) != 0:
             for t in u:
                 if t in typeDict:
