@@ -76,10 +76,10 @@ class MinispecKernel(Kernel):
         }
         anyOutput = False
         while activePipes:
-            readyPipes, _, _ = select.select(activePipes.keys(), [], [], 0)
+            readyPipes, _, _ = select.select(list(activePipes.keys()), [], [], 0)
             for pipe in readyPipes:
                 (name, linebuf) = activePipes[pipe]
-                data = os.read(pipe.fileno(), 1024)
+                data = os.read(pipe.fileno(), 1024).decode("utf-8")
                 if data == "":
                     # NOTE: This discards linebuf, so it doesn't print an
                     # unterminated last line, which is standard Jupyter
