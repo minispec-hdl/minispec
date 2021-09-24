@@ -9,10 +9,7 @@ end
 Vagrant.configure("2") do |config|
   config.vm.define "minispec"
   config.vm.hostname = "minispec"
-  # Includes gcc 8, but it's very slow to boot
-  #config.vm.box = "ubuntu/disco64"
-  # For now use Bento 18.04 instead, install gcc-8, and make it the default
-  config.vm.box = "bento/ubuntu-18.04"
+  config.vm.box = "bento/ubuntu-20.04"
   config.vm.provider "virtualbox" do |vb|
     vb.name = "minispec"
     vb.memory = "4096"
@@ -28,14 +25,10 @@ Vagrant.configure("2") do |config|
     export DEBIAN_FRONTEND=noninteractive
     apt-get -y update
     # Basics, direct minispec deps (include bsc deps), antlr deps, antlr runtime build
-    apt-get -y install vim  scons git build-essential g++ gcc-8 g++-8 libxft2 libgmp10  openjdk-8-jdk-headless  cmake pkg-config uuid-dev
-
-    # Make gcc-8 the default by using update-alternatives (see https://askubuntu.com/a/1028656)
-    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 700 --slave /usr/bin/g++ g++ /usr/bin/g++-7
-    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 800 --slave /usr/bin/g++ g++ /usr/bin/g++-8
+    apt-get -y install vim  scons git build-essential g++ libxft2 libgmp10  openjdk-8-jdk-headless  cmake pkg-config uuid-dev
 
     # Download bsc
-    BSVER="bsc-2021.07-ubuntu-18.04"
+    BSVER="bsc-2021.07-ubuntu-20.04"
     BSREL="2021.07"
     if [ ! -d ~vagrant/${BSVER} ]; then
       echo "Downloading bsc ${BSREL} / ${BSVER}"
@@ -64,14 +57,14 @@ Vagrant.configure("2") do |config|
     npm install -g netlistsvg
     
     # Jupyter notebook (locally, from source, with Minispec syntax)
-    apt-get -y install python-pip
+    apt-get -y install python3-pip
     if [ ! -d ~vagrant/notebook-5.7.8 ]; then
       pip install --upgrade setuptools pip
       # Install jupyter notebook with minispec syntax patch
       sudo -H -u vagrant /vagrant/jupyter/install-jupyter.sh
       # Link minispec kernel so it can be used as a module
       # (alternatively, change kernel def to include full path to minispeckerenel.py)
-      ln -s /vagrant/jupyter/minispeckernel.py /usr/local/lib/python2.7/dist-packages/
+      ln -s /vagrant/jupyter/minispeckernel.py /usr/local/lib/python3.8/dist-packages/
       # Install minispec jupyter kernel
       jupyter kernelspec install /vagrant/jupyter/kernel/minispec/
     fi
