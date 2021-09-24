@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
 # $lic$
 # Copyright (C) 2018-2020 by Daniel Sanchez
@@ -62,7 +62,7 @@ def autoterm():
     SIGTERM = 15
     result = cdll['libc.so.6'].prctl(PR_SET_PDEATHSIG, SIGTERM)
     if result != 0:
-        print "ERROR: prctl() failed"
+        print("ERROR: prctl() failed")
         sys.exit(0)
 
 def diff(f1, f2):
@@ -121,10 +121,10 @@ def printResult(argList):
     testsDone += 1
     (progname, status, diff) = argList
     if status != "OK" or args.verbose:
-        if not args.verbose: print "" # Don't follow status line
-        print progname, '.'*(60 - len(progname) - len(status)), status
+        if not args.verbose: print("") # Don't follow status line
+        print(progname, '.'*(60 - len(progname) - len(status)), status)
     if status != "OK":
-        print "        " + "\n        ".join(diff.split("\n"))
+        print("        " + "\n        ".join(diff.split("\n")))
     if not args.verbose:
         # Print status line (important to keep it fixed-width)
         pct = 100.0 * testsDone / ntests
@@ -151,7 +151,7 @@ def pmap(func, iterable, workers, callback):
             res = func(x)
             callback(res)
             return res
-        return map(func_and_callback, iterable)
+        return list(map(func_and_callback, iterable))
 
     pool = multiprocessing.Pool(workers, initializer=__init_pmap_worker) if workers > 0 else multiprocessing.Pool(initializer=__init_pmap_worker) # as many workers as HW threads
     try:
@@ -162,7 +162,7 @@ def pmap(func, iterable, workers, callback):
             while not r.ready(): r.wait(0.05) # 50ms, to catch keyboard interrupts
             ret.append(r.get())
     except KeyboardInterrupt:
-        print "Caught KeyboardInterrupt, terminating workers"
+        print("Caught KeyboardInterrupt, terminating workers")
         pool.terminate()
         pool.join()
         raise KeyboardInterrupt
@@ -216,13 +216,13 @@ else:
 
 if not os.path.exists(args.outdir): os.makedirs(args.outdir)
 if args.resume:
-    print "Finding non-started tests (WARNING: Manually remove incomplete or suspected incomplete tests, e.g., those with mtime close to the end)"
+    print("Finding non-started tests (WARNING: Manually remove incomplete or suspected incomplete tests, e.g., those with mtime close to the end)")
     todoCmds = []
     for cmd in cmds:
         (progname, _) = cmd
         if not os.path.exists(os.path.join(args.outdir, progname + ".out")) or not os.path.exists(os.path.join(args.outdir, progname + ".err")):
             todoCmds.append(cmd)
-    print "Running %d out of %d tests" % (len(todoCmds), len(cmds))
+    print("Running %d out of %d tests" % (len(todoCmds), len(cmds)))
     cmds = todoCmds
 
 # dsm: Choose workers to maximize throughput
@@ -233,6 +233,6 @@ if workers == 0:
     if ntests < 2*workers: workers = ntests
 
 tstart = time.time()
-print "Running {} tests | {} workers".format(ntests, workers)
+print("Running {} tests | {} workers".format(ntests, workers))
 res = pmap(runAndVerify, cmds, workers, printResult)
-print "\n%d/%d tests completed successfully in %.1f s" % (len([x for x in res if x[1] == "OK"]), ntests, time.time() - tstart)
+print("\n%d/%d tests completed successfully in %.1f s" % (len([x for x in res if x[1] == "OK"]), ntests, time.time() - tstart))
