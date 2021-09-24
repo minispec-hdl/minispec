@@ -29,16 +29,16 @@ else:
 def cmd(c):
     exitCode = os.WEXITSTATUS(os.system(c))
     if exitCode != 0:
-        print "Command %s failed with exit code %d" % (c, exitCode)
+        print("Command %s failed with exit code %d" % (c, exitCode))
 if not os.path.exists(antlrJar):
-    print "Downloading ANTLR jar..."
+    print("Downloading ANTLR jar...")
     cmd("wget -nv https://www.antlr.org/download/antlr-4.7.2-complete.jar -O " + antlrJar)
 if not os.path.exists(antlrBase):
-    print "Downloading ANTLR sources..."
+    print("Downloading ANTLR sources...")
     cmd("wget -nv https://github.com/antlr/antlr4/archive/4.7.2.tar.gz -O 4.7.2.tar.gz")
     cmd("tar xfz 4.7.2.tar.gz && mv antlr4-4.7.2 %s && rm 4.7.2.tar.gz" % (antlrBase,))
 if not os.path.exists(antlrLib):
-    print "Building ANTLR runtime lib.."
+    print("Building ANTLR runtime lib...")
     cmd("cd %s/runtime/Cpp/ && mkdir -p build && cd build && cmake .. && make -j`nproc`" % (antlrBase,))
 
 # Version tag. Depends on all sources and git repo state
