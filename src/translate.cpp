@@ -578,7 +578,8 @@ class ElaboratorParseTreeWalker : public tree::ParseTreeWalker {
             // doesn't follow the same structure as the original code.
             bool stop = dynamic_cast<MinispecParser::PackageDefContext*>(t) ||
                 dynamic_cast<MinispecParser::ModuleDefContext*>(t) ||
-                dynamic_cast<MinispecParser::ForStmtContext*>(t);
+                dynamic_cast<MinispecParser::ForStmtContext*>(t) ||
+                dynamic_cast<MinispecParser::IfStmtContext*>(t);
             if (stop) {
                 enterRule(listener, t);
                 exitRule(listener, t);
@@ -709,7 +710,7 @@ class Elaborator : public MinispecBaseListener {
                         auto res = parent->getValue(ctx);
                         if (!res.is<int64_t>()) {
                             std::string errMsg = quote(ctx) + " is neither a type nor an Integer value";
-                            // Try to arriave at a CallExpr
+                            // Try to arrive at a CallExpr
                             MinispecParser::CallExprContext* callExpr = nullptr;
                             auto opExpr = dynamic_cast<MinispecParser::OperatorExprContext*>(expr);
                             auto binopExpr = opExpr->binopExpr();
@@ -763,18 +764,14 @@ class Elaborator : public MinispecBaseListener {
         void enterRuleDef(MinispecParser::RuleDefContext* ctx) override { ic.enterMutableLevel(); }
         void enterFunctionDef(MinispecParser::FunctionDefContext* ctx) override { ic.enterMutableLevel(); }
         void enterBeginEndBlock(MinispecParser::BeginEndBlockContext* ctx) override { ic.enterMutableLevel(); }
-        //void enterIfStmt(MinispecParser::IfStmtContext* ctx) override { ic.enterPoisoningLevel(); }
         void enterCaseStmt(MinispecParser::CaseStmtContext* ctx) override { ic.enterPoisoningLevel(); }
-        void enterCaseExpr(MinispecParser::CaseExprContext* ctx) override { ic.enterPoisoningLevel(); } // TODO: Needed?
 
         //void exitModuleDef(MinispecParser::ModuleDefContext* ctx) override { ic.exitLevel(); }
         void exitMethodDef(MinispecParser::MethodDefContext* ctx) override { ic.exitLevel(); }
         void exitRuleDef(MinispecParser::RuleDefContext* ctx) override { ic.exitLevel(); }
         //void exitFunctionDef(MinispecParser::FunctionDefContext* ctx) override { ic.exitLevel(); }
         void exitBeginEndBlock(MinispecParser::BeginEndBlockContext* ctx) override { ic.exitLevel(); }
-        //void exitIfStmt(MinispecParser::IfStmtContext* ctx) override { ic.exitLevel(); }
         void exitCaseStmt(MinispecParser::CaseStmtContext* ctx) override { ic.exitLevel(); }
-        void exitCaseExpr(MinispecParser::CaseExprContext* ctx) override { ic.exitLevel(); } // TODO: Needed?
 
         // Catch all variable definitions (some of which include elaboration sites)
         void exitVarBinding(MinispecParser::VarBindingContext* ctx) override {
@@ -967,22 +964,14 @@ class Elaborator : public MinispecBaseListener {
         }
 
         // Elaboration of control structures
-        void enterIfStmt(MinispecParser::IfStmtContext* ctx) override {
+        void exitIfStmt(MinispecParser::IfStmtContext* ctx) override {
             // First, evaluate the condition
             elaboratorWalker.walk(this, ctx->expression());
-            // If condition is known, this isn't a poisoning level
-            Any condValue = getValue(ctx->expression());
-            if (condValue.is<bool>()) ic.enterMutableLevel();
-            else ic.enterPoisoningLevel();
-        }
-
-        void exitIfStmt(MinispecParser::IfStmtContext* ctx) override {
-            ic.exitLevel();  // was a poisoning/normal level
             // If we know the condition at elab time, emit only the taken branch
             Any condValue = getValue(ctx->expression());
+            bool hasElse = ctx->stmt().size() == 2;
             if (condValue.is<bool>()) {
                 bool cond = condValue.as<bool>();
-                bool hasElse = ctx->stmt().size() == 2;
                 auto tc = createTranslatedCodePtr();
                 tc->emitStart(ctx);
                 tc->emit(cond? "/* taken if */ " : hasElse? "/* taken else */ " : "/* non-taken if */ ");
@@ -991,10 +980,27 @@ class Elaborator : public MinispecBaseListener {
                 // fixes miscompilation of "if (x) let y = z;" and similar
                 // (not really sensible, since the variable immediately goes
                 // out of scope; but the BSC error is inscrutable)
-                if (cond) tc->emit("begin ", ctx->stmt()[0], " end");
-                else if (hasElse) tc->emit("begin ", ctx->stmt()[1], " end");
+                ic.enterMutableLevel();
+                if (cond) {
+                    elaboratorWalker.walk(this, ctx->stmt()[0]);
+                    tc->emit("begin ", ctx->stmt()[0], " end");
+                } else if (hasElse) {
+                    elaboratorWalker.walk(this, ctx->stmt()[1]);
+                    tc->emit("begin ", ctx->stmt()[1], " end");
+                }
+                ic.exitLevel();
                 tc->emitEnd();
                 setValue(ctx, tc);
+            } else {
+                // Elaborate all branches (poisoning any integers set)
+                ic.enterPoisoningLevel();
+                elaboratorWalker.walk(this, ctx->stmt()[0]);
+                ic.exitLevel();
+                if (hasElse) {
+                    ic.enterPoisoningLevel();
+                    elaboratorWalker.walk(this, ctx->stmt()[1]);
+                    ic.exitLevel();
+                }
             }
         }
 
