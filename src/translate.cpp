@@ -1195,17 +1195,57 @@ class Elaborator : public MinispecBaseListener {
             setValue(ctx, res);
         }
 
+        void exitCaseExpr(MinispecParser::CaseExprContext *ctx) override {
+            // If we can determine the right item at compile-time, sustitute
+            // the whole case-expression with it. This allows elaborating
+            // Integer case expressions
+            Any exprValue = getValue(ctx->expression());
+            if (exprValue.is<bool>() || exprValue.is<int64_t>()) {
+                MinispecParser::ExpressionContext* matchedBody = nullptr;
+                MinispecParser::ExpressionContext* defaultBody = nullptr;
+                bool hasVariableItemExprs = false;
+                for (auto item : ctx->caseExprItem()) {
+                    bool match = false;
+                    for (auto c : item->exprPrimary()) {
+                        Any cValue = getValue(c);
+                        match =
+                            (cValue.is<int64_t>() && exprValue.is<int64_t>() && 
+                             cValue.as<int64_t>() == exprValue.as<int64_t>()) ||
+                            (cValue.is<bool>() && exprValue.is<bool>() && 
+                             cValue.as<bool>() == exprValue.as<bool>());
+                        if (match) break;
+                        if (!cValue.is<int64_t>() && !cValue.is<bool>())
+                            hasVariableItemExprs = true;
+                    }
+                    if (match) {
+                        matchedBody = item->body;
+                        break;
+                    } else if (item->exprPrimary().size() == 0) {
+                        // This is the default case, track but keep trying
+                        defaultBody = item->body;
+                    }
+                }
+
+                auto substBody = matchedBody? matchedBody :
+                    (!hasVariableItemExprs)? defaultBody : nullptr;
+                if (substBody)
+                    setValue(ctx, getValue(substBody));
+            }
+        }
+
         void exitCaseExprItem(MinispecParser::CaseExprItemContext* ctx) override {
             // bsc does not parse compound expressions correctly in caseExpr,
-            // so wrap them all in parentheses
-            // NOTE: We're modifying ctx->body's value, rather then ctx, which
+            // so wrap them in parentheses
+            // NOTE: We're modifying ctx->body's value, rather than ctx, which
             // is unusual. This works fine even if ctx->body is elaborated (ie
-            // non-null getValue()).  See TranslatedCode::emit().
-            auto tc = createTranslatedCodePtr();
-            tc->emitStart(ctx->body);
-            tc->emit("(", ctx->body, ")");
-            tc->emitEnd();
-            setValue(ctx->body, tc);
+            // non-null getValue()). See TranslatedCode::emit().
+            if (!getValue(ctx->body).is<bool>() && !getValue(ctx->body).is<int64_t>()) {
+                auto tc = createTranslatedCodePtr();
+                tc->emitStart(ctx->body);
+                tc->emit("(", ctx->body, ")");
+                tc->emitEnd();
+                setValue(ctx->body, tc);
+            }
         }
 
         // Propagate value
