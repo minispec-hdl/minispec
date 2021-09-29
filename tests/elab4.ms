@@ -13,9 +13,7 @@ module Test;
             $finish;
         end
 
-        // FIXME(dsm): Case statement elaboration
-/*        
-        for (Integer i = 0; i < 4; i = i + 1) begin
+        for (Integer i = 0; i < 8; i = i + 1) begin
             case (i)
                 0: begin
                     vi = vi + 7;
@@ -35,7 +33,7 @@ module Test;
             $display("Test 2 FAIL %d != %d", vi, vb);
             $finish;
         end
-*/
+        
         for (Integer i = 0; i < 4; i = i + 1) begin
             vi = case (i % 2)
                 0: vi + 1;
@@ -51,7 +49,7 @@ module Test;
             $finish;
         end
 
-       $display("PASS %d == %d", vi, vb);
-       $finish;
+        $display("PASS %d == %d", vi, vb);
+        $finish;
     endrule
 endmodule

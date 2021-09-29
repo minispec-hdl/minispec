@@ -579,7 +579,8 @@ class ElaboratorParseTreeWalker : public tree::ParseTreeWalker {
             bool stop = dynamic_cast<MinispecParser::PackageDefContext*>(t) ||
                 dynamic_cast<MinispecParser::ModuleDefContext*>(t) ||
                 dynamic_cast<MinispecParser::ForStmtContext*>(t) ||
-                dynamic_cast<MinispecParser::IfStmtContext*>(t);
+                dynamic_cast<MinispecParser::IfStmtContext*>(t) ||
+                dynamic_cast<MinispecParser::CaseStmtContext*>(t);
             if (stop) {
                 enterRule(listener, t);
                 exitRule(listener, t);
@@ -764,14 +765,14 @@ class Elaborator : public MinispecBaseListener {
         void enterRuleDef(MinispecParser::RuleDefContext* ctx) override { ic.enterMutableLevel(); }
         void enterFunctionDef(MinispecParser::FunctionDefContext* ctx) override { ic.enterMutableLevel(); }
         void enterBeginEndBlock(MinispecParser::BeginEndBlockContext* ctx) override { ic.enterMutableLevel(); }
-        void enterCaseStmt(MinispecParser::CaseStmtContext* ctx) override { ic.enterPoisoningLevel(); }
+        //void enterCaseStmt(MinispecParser::CaseStmtContext* ctx) override { ic.enterPoisoningLevel(); }
 
         //void exitModuleDef(MinispecParser::ModuleDefContext* ctx) override { ic.exitLevel(); }
         void exitMethodDef(MinispecParser::MethodDefContext* ctx) override { ic.exitLevel(); }
         void exitRuleDef(MinispecParser::RuleDefContext* ctx) override { ic.exitLevel(); }
         //void exitFunctionDef(MinispecParser::FunctionDefContext* ctx) override { ic.exitLevel(); }
         void exitBeginEndBlock(MinispecParser::BeginEndBlockContext* ctx) override { ic.exitLevel(); }
-        void exitCaseStmt(MinispecParser::CaseStmtContext* ctx) override { ic.exitLevel(); }
+        //void exitCaseStmt(MinispecParser::CaseStmtContext* ctx) override { ic.exitLevel(); }
 
         // Catch all variable definitions (some of which include elaboration sites)
         void exitVarBinding(MinispecParser::VarBindingContext* ctx) override {
@@ -1004,6 +1005,74 @@ class Elaborator : public MinispecBaseListener {
             }
         }
 
+        void exitCaseStmt(MinispecParser::CaseStmtContext *ctx) override {
+            // If we can determine the right item at compile-time, substitute
+            // the whole case-statement with it. This enables elaboration of
+            // statically-determined case statements that contain Integer
+            // assignments, rather than poisoning those assignments.
+            elaboratorWalker.walk(this, ctx->expression());
+            Any exprValue = getValue(ctx->expression());
+            if (exprValue.is<bool>() || exprValue.is<int64_t>()) {
+                std::cout << "XXXX\n";
+                MinispecParser::StmtContext* matchedStmt = nullptr;
+                bool hasVariableItemExprs = false;
+                for (auto item : ctx->caseStmtItem()) {
+                    bool match = false;
+                    for (auto c : item->expression()) {
+                        elaboratorWalker.walk(this, c);
+                        Any cValue = getValue(c);
+                        match =
+                            (cValue.is<int64_t>() && exprValue.is<int64_t>() && 
+                             cValue.as<int64_t>() == exprValue.as<int64_t>()) ||
+                            (cValue.is<bool>() && exprValue.is<bool>() && 
+                             cValue.as<bool>() == exprValue.as<bool>());
+                        if (match) break;
+                        if (!cValue.is<int64_t>() && !cValue.is<bool>())
+                            hasVariableItemExprs = true;
+                    }
+                    if (match) {
+                        matchedStmt = item->stmt();
+                        break;
+                    }
+                }
+
+                auto substStmt = matchedStmt? matchedStmt :
+                    (!hasVariableItemExprs && ctx->caseStmtDefaultItem())?
+                    ctx->caseStmtDefaultItem()->stmt() : nullptr;
+                if (substStmt) {
+                    ic.enterMutableLevel();
+                    elaboratorWalker.walk(this, substStmt);
+                    auto tc = createTranslatedCodePtr();
+                    tc->emitStart(ctx);
+                    tc->emit("/* elaborated case */ begin ", substStmt, " end");
+                    ic.exitLevel();
+                    tc->emitEnd();
+                    setValue(ctx, tc);
+                    return;
+                } else if (!hasVariableItemExprs) {
+                    auto tc = createTranslatedCodePtr();
+                    tc->emitStart(ctx);
+                    tc->emit("/* elaborated case with no match */");
+                    tc->emitEnd();
+                    setValue(ctx, tc);
+                    return;
+                }
+            }
+
+            // Fallthrough path: We could not resolve case statically, so
+            // elaborate in full, using a poisoning level per item stmt
+            for (auto item : ctx->caseStmtItem()) {
+                ic.enterPoisoningLevel();
+                elaboratorWalker.walk(this, item);
+                ic.exitLevel();
+            }
+            if (ctx->caseStmtDefaultItem()) {
+                ic.enterPoisoningLevel();
+                elaboratorWalker.walk(this, ctx->caseStmtDefaultItem());
+                ic.exitLevel();
+            }
+        }
+
         void exitForStmt(MinispecParser::ForStmtContext* ctx) override {
             // Initial sanity checks
             if (ctx->type()->getText() != "Integer") {
@@ -1196,7 +1265,7 @@ class Elaborator : public MinispecBaseListener {
         }
 
         void exitCaseExpr(MinispecParser::CaseExprContext *ctx) override {
-            // If we can determine the right item at compile-time, sustitute
+            // If we can determine the right item at compile-time, substitute
             // the whole case-expression with it. This allows elaborating
             // Integer case expressions
             Any exprValue = getValue(ctx->expression());
