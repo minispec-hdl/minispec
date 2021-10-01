@@ -44,10 +44,13 @@ parser.add_argument("-e", "--expdir", type=str,
 parser.add_argument("-o", "--outdir", type=str,
         default="/tmp/{}/test_runs".format(getpass.getuser()),
         help="directory for test runs and outputs")
+parser.add_argument("-m", "--matchRegex", type=str,
+        default="",
+        help="if specified, only run results whose name matches this regex")
 parser.add_argument("-v", "--verbose",
         default=False, action="store_true",
         help="print out more information")
-parser.add_argument("--workers", type=int,
+parser.add_argument("-j", "--workers", type=int,
         default=0,
         help="Workers for pmap calls")
 parser.add_argument("--resume", default=False, action="store_true", help="resume a long run")
@@ -74,7 +77,7 @@ def runAndVerify(argList):
     tempDir = tempfile.mkdtemp(dir=args.outdir, suffix=suffix)
     if preRunHook is not None:
         cmdlist = preRunHook(progname, cmdlist, tempDir)
-        
+
     outPath = os.path.join(args.outdir, progname + '.out')
     errPath = os.path.join(args.outdir, progname + '.err')
     with open(outPath, 'w') as out, open(errPath, 'w') as err:
@@ -90,7 +93,7 @@ def runAndVerify(argList):
         fullDiff = (outDiff + "\n" + errDiff).strip()
         if len(fullDiff):
             retVal = (progname, "FAIL", fullDiff)
- 
+
     shutil.rmtree(tempDir)
     return retVal
 
@@ -178,7 +181,7 @@ if os.path.exists(os.path.join(testDir, "runTargets.py")):
     def fullName(file, cmd, tgt=None):
         if tgt == None:
             return file + "_" + "cmd"
-        # Sanitize parametrics inname
+        # Sanitize parametrics in name
         s = tgt.replace("#", ".").replace("(", "").replace(",", ".").replace(")", "").replace(" ", "")
         return "_".join([file, cmd, s])
     compileCmds = [(fullName(file, "compile"), ["msc", os.path.join(testDir, file + ".ms")])
@@ -213,6 +216,12 @@ else:
 
     cmds = [(os.path.splitext(os.path.basename(test))[0],
         runCmd(test)) for test in tests]
+
+if len(args.matchRegex):
+    mr = re.compile(args.matchRegex)
+    matchCmds = [cmd for cmd in cmds if mr.match(cmd[0])]
+    print ("Running %d out of %d tests that matched regex '%s'" % (len(matchCmds), len(cmds), args.matchRegex))
+    cmds = matchCmds
 
 if not os.path.exists(args.outdir): os.makedirs(args.outdir)
 if args.resume:
