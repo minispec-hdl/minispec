@@ -13,7 +13,7 @@
  * details.
  *
  * You should have received a copy of the GNU General Public License along with
- * this program. If not, see <http://www.gnu.org/licenses/>. 
+ * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -95,4 +95,4 @@ class SourceMap {
         const std::string& getTopModule() const { return topModule; }
 };
 
-SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*> parsedTrees, const std::string& topLevel);
+SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*>& parsedTrees, const std::string& topLevel);

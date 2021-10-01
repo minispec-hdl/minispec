@@ -13,7 +13,7 @@
  * details.
  *
  * You should have received a copy of the GNU General Public License along with
- * this program. If not, see <http://www.gnu.org/licenses/>. 
+ * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /* General logging/info/warn/panic routines */
@@ -185,7 +185,7 @@ if (unlikely(!(expr))) { \
     std::stringstream __assert_ss__LINE__; (PrintExpr(__assert_ss__LINE__)->*expr); \
     fprintf(logFdErr, "%sFailed assertion on %s:%d '%s' (with '%s')\n", logHeader, __FILE__, __LINE__, #expr, __assert_ss__LINE__.str().c_str()); \
     fflush(logFdErr); \
-    *reinterpret_cast<int*>(0L) = 42; /*SIGSEGVs*/ \
+    /**reinterpret_cast<int*>(0L) = 42;*/ /*SIGSEGVs*/ \
     exit(1); \
 };
 
@@ -195,7 +195,7 @@ if (unlikely(!(cond))) { \
     fprintf(logFdErr, args); \
     fprintf(logFdErr, "\n"); \
     fflush(logFdErr); \
-    *reinterpret_cast<int*>(0L) = 42; /*SIGSEGVs*/ \
+    /**reinterpret_cast<int*>(0L) = 42;*/ /*SIGSEGVs*/ \
     exit(1); \
 };
 #else

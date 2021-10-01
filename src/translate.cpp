@@ -13,7 +13,7 @@
  * details.
  *
  * You should have received a copy of the GNU General Public License along with
- * this program. If not, see <http://www.gnu.org/licenses/>. 
+ * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <algorithm>
@@ -224,7 +224,7 @@ class TranslatedCode {
             emitStack.push_back(std::make_tuple(ctx, pos()));
         }
 
-        void emitEnd(const std::string ctxInfo = "") {
+        void emitEnd(const std::string& ctxInfo = "") {
             assert(!emitStack.empty());
             auto [ctx, startPos] = emitStack.back();
             emitStack.pop_back();
@@ -718,7 +718,7 @@ class Elaborator : public MinispecBaseListener {
                             assert(binopExpr);
                             if (binopExpr && binopExpr->unopExpr() && binopExpr->unopExpr()->exprPrimary())
                                 callExpr = dynamic_cast<MinispecParser::CallExprContext*>(binopExpr->unopExpr()->exprPrimary());
-                            
+
                             if (callExpr) {
                                 auto fcnStr = callExpr->fcn->getText();
                                 auto cStr = callExpr->getText();
@@ -1022,9 +1022,9 @@ class Elaborator : public MinispecBaseListener {
                         elaboratorWalker.walk(this, c);
                         Any cValue = getValue(c);
                         match =
-                            (cValue.is<int64_t>() && exprValue.is<int64_t>() && 
+                            (cValue.is<int64_t>() && exprValue.is<int64_t>() &&
                              cValue.as<int64_t>() == exprValue.as<int64_t>()) ||
-                            (cValue.is<bool>() && exprValue.is<bool>() && 
+                            (cValue.is<bool>() && exprValue.is<bool>() &&
                              cValue.as<bool>() == exprValue.as<bool>());
                         if (match) break;
                         if (!cValue.is<int64_t>() && !cValue.is<bool>())
@@ -1196,7 +1196,7 @@ class Elaborator : public MinispecBaseListener {
                 else res = BasicError::create(ctx, errorColored(op) + " is not a valid operator for Bool values");
             } else if (left.is<int64_t>() && right.is<bool>()) {
                 res = BasicError::create(ctx, "operands have values of incompatible types (Integer and Bool)");
-            } else if (left.is<int64_t>() && right.is<bool>()) {
+            } else if (left.is<bool>() && right.is<int64_t>()) {
                 res = BasicError::create(ctx, "operands have values of incompatible types (Bool and Integer)");
             } else {
                 res = SubErrors::create(left, right);
@@ -1278,9 +1278,9 @@ class Elaborator : public MinispecBaseListener {
                     for (auto c : item->exprPrimary()) {
                         Any cValue = getValue(c);
                         match =
-                            (cValue.is<int64_t>() && exprValue.is<int64_t>() && 
+                            (cValue.is<int64_t>() && exprValue.is<int64_t>() &&
                              cValue.as<int64_t>() == exprValue.as<int64_t>()) ||
-                            (cValue.is<bool>() && exprValue.is<bool>() && 
+                            (cValue.is<bool>() && exprValue.is<bool>() &&
                              cValue.as<bool>() == exprValue.as<bool>());
                         if (match) break;
                         if (!cValue.is<int64_t>() && !cValue.is<bool>())
@@ -1692,11 +1692,11 @@ class Elaborator : public MinispecBaseListener {
         // Forbid some identifiers to avoid conflicts
         void exitLowerCaseIdentifier(MinispecParser::LowerCaseIdentifierContext* ctx) override {
             auto id = ctx->getText();
-            auto err = [&](std::string e) {
-                report(BasicError(ctx, "lowercase identifier " + quote(ctx) + 
+            auto err = [&](const std::string& e) {
+                report(BasicError(ctx, "lowercase identifier " + quote(ctx) +
                             " " + e + ", which is forbidden"));
             };
- 
+
             if (id.find("mk") == 0) err("begins with " + hlColored("'mk'"));
             if (id.find("___input") != -1ul) err("contains " + hlColored("'___input'"));
             if (svKeywords.count(id)) err("is a SystemVerilog keyword");
@@ -1820,7 +1820,7 @@ std::string getPrelude() {
     return prelude.str();
 }
 
-SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*> parsedTrees, const std::string& topLevel) {
+SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*>& parsedTrees, const std::string& topLevel) {
     // Initial validation of topLevel arg
     auto topLevelParametric = validateTopLevel(topLevel);
 
@@ -1894,7 +1894,7 @@ SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*> p
                 } else {
                     panic("unhandled parametric... did the grammar change? (%s)", ctx->getText().c_str());
                 }
-                return std::tie(paramFormals, paramType);
+                return std::make_tuple(paramFormals, paramType);
             };
 
             auto specializedParams = [getParamInfo](ParserRuleContext* ctx) {
@@ -1985,7 +1985,7 @@ SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*> p
                         // We're constantly clearing values from params, so re-elaborate
                         elab.clearValues(pfParam);
                         elaboratorWalker.walk(&elab, pfParam);
-                        
+
                         auto sameVals = [](Any v1, Any v2) {
                             if (v1.is<int64_t>() && v2.is<int64_t>())
                                 return v1.as<int64_t>() == v2.as<int64_t>();
@@ -2047,7 +2047,7 @@ SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*> p
             }
         }
     }
-    
+
     std::string topModule = "";
     if (topLevelParametric) topModule = "mk" + topLevelParametric->str();
 
@@ -2060,7 +2060,7 @@ SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*> p
                 errorColored("'" + topLevelParametric->str() + "'");
             reportErr(msg, "", nullptr);
         }
-        
+
         ParametricUse ifcPu = *topLevelParametric;
         if (!isupper(ifcPu.name[0])) {
             ifcPu.name[0] = toupper(ifcPu.name[0]);

@@ -13,7 +13,7 @@
  * details.
  *
  * You should have received a copy of the GNU General Public License along with
- * this program. If not, see <http://www.gnu.org/licenses/>. 
+ * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <string>
@@ -37,7 +37,7 @@ void initReporting(bool reportAllErrors) {
 }
 
 void reportMsg(bool isError, const std::string& msg,
-        const std::string locInfo, tree::ParseTree* ctx) {
+        const std::string& locInfo, tree::ParseTree* ctx) {
     auto& msgs = isError? errMsgs : warnMsgs;
     auto& ctxs = isError? errCtxs : warnCtxs;
     size_t& total = isError? totalErrs : totalWarns;
@@ -56,10 +56,10 @@ void reportMsg(bool isError, const std::string& msg,
     total++;
 }
 
-void reportErr(const std::string& msg, const std::string locInfo,
+void reportErr(const std::string& msg, const std::string& locInfo,
         tree::ParseTree* ctx) { reportMsg(true, msg, locInfo, ctx); }
 
-void reportWarn(const std::string& msg, const std::string locInfo,
+void reportWarn(const std::string& msg, const std::string& locInfo,
         tree::ParseTree* ctx) { reportMsg(false, msg, locInfo, ctx); }
 
 void exitIfErrors() {

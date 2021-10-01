@@ -13,7 +13,7 @@
  * details.
  *
  * You should have received a copy of the GNU General Public License along with
- * this program. If not, see <http://www.gnu.org/licenses/>. 
+ * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <filesystem>
@@ -175,7 +175,7 @@ std::string getContextName(RuleContext* ctx) {
     if (dynamic_cast<MinispecParser::ArgFormalContext*>(ctx)) return "argument definition";
     if (dynamic_cast<MinispecParser::ArgFormalsContext*>(ctx)) return "arguments list";
 
-    if (dynamic_cast<MinispecParser::ParamsContext*>(ctx)) return "parameter";
+    if (dynamic_cast<MinispecParser::ParamContext*>(ctx)) return "parameter";
     if (dynamic_cast<MinispecParser::ParamsContext*>(ctx)) return "parameters";
     if (dynamic_cast<MinispecParser::ParamFormalContext*>(ctx)) return "parameter definition";
     if (dynamic_cast<MinispecParser::ParamFormalsContext*>(ctx)) return "parameters list";

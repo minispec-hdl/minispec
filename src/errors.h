@@ -13,7 +13,7 @@
  * details.
  *
  * You should have received a copy of the GNU General Public License along with
- * this program. If not, see <http://www.gnu.org/licenses/>. 
+ * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -25,12 +25,12 @@
 void initReporting(bool reportAllErrors);
 
 void reportMsg(bool isError, const std::string& msg,
-        const std::string locInfo = "", antlr4::tree::ParseTree* ctx = nullptr);
+        const std::string& locInfo = "", antlr4::tree::ParseTree* ctx = nullptr);
 
-void reportErr(const std::string& msg, const std::string locInfo = "",
+void reportErr(const std::string& msg, const std::string& locInfo = "",
         antlr4::tree::ParseTree* ctx = nullptr);
 
-void reportWarn(const std::string& msg, const std::string locInfo = "",
+void reportWarn(const std::string& msg, const std::string& locInfo = "",
         antlr4::tree::ParseTree* ctx = nullptr);
 
 void exitIfErrors();
