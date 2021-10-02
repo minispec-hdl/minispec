@@ -1189,10 +1189,10 @@ class Elaborator : public MinispecBaseListener {
                 else if (op == "!=") res = (bool) (l != r);
                 else res = BasicError::create(ctx, errorColored(op) + " is not a valid operator for Integer values");
             } else if (left.is<bool>() && right.is<bool>()) {
-                int64_t l = left.as<bool>();
-                int64_t r = right.as<bool>();
-                if (op == "&&") res = (bool)(l && r);
-                else if (op == "||") res = (bool)(l || r);
+                bool l = left.as<bool>();
+                bool r = right.as<bool>();
+                if (op == "&&") res = l && r;
+                else if (op == "||") res = l || r;
                 else res = BasicError::create(ctx, errorColored(op) + " is not a valid operator for Bool values");
             } else if (left.is<int64_t>() && right.is<bool>()) {
                 res = BasicError::create(ctx, "operands have values of incompatible types (Integer and Bool)");
