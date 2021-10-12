@@ -1,7 +1,7 @@
 <svg  xmlns="http://www.w3.org/2000/svg"
   xmlns:xlink="http://www.w3.org/1999/xlink"
   xmlns:s="https://github.com/nturley/netlistsvg"
-  xmlns:s="https://6004.mit.edu">
+  xmlns:s="https://github.com/minispec-hdl/minispec">
   <s:properties>
     <s:layoutEngine
       org.eclipse.elk.algorithm="layered"
