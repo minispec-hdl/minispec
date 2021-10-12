@@ -1,5 +1,5 @@
 /** $lic$
- * Copyright (C) 2019-2020 by Daniel Sanchez
+ * Copyright (C) 2019-2021 by Daniel Sanchez
  *
  * This file is part of the Minispec compiler and toolset.
  *
@@ -13,7 +13,7 @@
  * details.
  *
  * You should have received a copy of the GNU General Public License along with
- * this program. If not, see <http://www.gnu.org/licenses/>. 
+ * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <string>

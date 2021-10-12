@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 # $lic$
-# Copyright (C) 2018-2020 by Daniel Sanchez
+# Copyright (C) 2018-2021 by Daniel Sanchez
 #
 # This file is part of the Minispec compiler and toolset.
 #
@@ -317,7 +317,7 @@ if __name__ == "__main__":
     recadd3 = "strash; rec_add3; balance; rec_add3; dc2; rec_add3; if -K 8; bidec; strash; rec_add3; dc2; rec_add3; if -g -K 6; strash; rec_add3;"
 
     if args.optLevel == 0:
-        # -O0: No optimization other than balancing XOR trees (balance -x). 
+        # -O0: No optimization other than balancing XOR trees (balance -x).
         optCfgs = [("ox", "balance -x")]
     elif args.optLevel == 1:
         # -O1: Gentle optimization, balances XOR trees well, generally outperforms -O0,
@@ -467,7 +467,7 @@ if __name__ == "__main__":
         (delay, area, outDir) = runYosys_finish(p)
         results.append((float(delay), float(area), outDir))
     results.sort()
-    
+
     if results[0][0] == 0.0 and results[0][1] == 0.0:
         print("WARNING: Synthesized circuit has no logic; synthesis done")
         # TODO: Refactor code so that we can print circuit if args.view
@@ -819,7 +819,7 @@ if __name__ == "__main__":
 
                 blif = readFile(os.path.join(yosysOutDir, "out.blif"))
                 synonyms = re.findall(".names (\S+) (\S+)", blif)
-                
+
                 # Find the ABC node name for every non-ABC node name.
                 # Requires multiple passes due to non-ABC synonyms
                 nameToAbc = {}
@@ -889,12 +889,12 @@ if __name__ == "__main__":
                         abcNodeName = abcOutputs[abcName]
                         if abcNodeName not in outNodes or prio(outNodes[abcNodeName], False) < prio(name, False):
                             outNodes[abcNodeName] = name
-                
+
                 critOuts = list(reversed(sorted([(float(delay), net) for (net, (delay, _, _))
                     in delayInfo.items() if net in outNodes])))
                 if args.paths > 0 and args.paths < len(critOuts):
                     critOuts = critOuts[:args.paths]
-                
+
                 print("\nLongest paths:")
                 printPath("Start", "End", "Delay")
                 printPath('-----', '---', '-----')

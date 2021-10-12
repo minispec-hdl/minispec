@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 # $lic$
-# Copyright (C) 2018-2020 by Daniel Sanchez
+# Copyright (C) 2018-2021 by Daniel Sanchez
 #
 # This file is part of the Minispec compiler and toolset.
 #
