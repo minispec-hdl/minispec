@@ -531,8 +531,13 @@ struct ForElabStep {
 typedef std::variant<ParametricUse, ForElabStep> ElabStep;
 static std::array<ElabStep, 16> elabStepBuf;
 static uint64_t numElabSteps = 0;
-static uint64_t maxElabSteps = 50000; // TODO: Make configurable
-static uint64_t maxDepth = 1000; // TODO: Make configurable
+static uint64_t maxElabSteps = 50000;
+static uint64_t maxElabDepth = 1000;
+
+void setElabLimits(uint64_t maxSteps, uint64_t maxDepth) {
+    maxElabSteps = maxSteps;
+    maxElabDepth = maxDepth;
+}
 
 void registerElabStep(ElabStep es, uint64_t depth = 0) {
     elabStepBuf[numElabSteps++ % elabStepBuf.size()] = es;
@@ -540,10 +545,10 @@ void registerElabStep(ElabStep es, uint64_t depth = 0) {
     // FIXME: Use error formatting helpers...
     if (maxElabSteps && numElabSteps > maxElabSteps) {
         error = true;
-        std::cout << errorColored("error: ") << "exceeded maximum number of elaboration steps (" << maxElabSteps << "). The design may have a non-terminating loop or sequence of parametric functions, modules, or types. Fix the design to avoid non-termination, or increase the maximum number of elaboration steps if the design is correct.";
-    } else if (maxDepth && depth > maxDepth) {
+        std::cout << errorColored("error: ") << "exceeded maximum number of elaboration steps (" << maxElabSteps << "). The design may have a non-terminating loop or sequence of parametric functions, modules, or types. Fix the design to avoid non-termination, or increase the maximum number of elaboration steps (with --max-elab-steps) if the design is correct.";
+    } else if (maxElabDepth && depth > maxElabDepth) {
         error = true;
-        std::cout << errorColored("error: ") << "exceeded maximum elaboration depth (" << maxDepth << "). The design may have a non-terminating recursion of parametric functions, modules, or types. Fix the design to avoid non-termination, or increase the maximum elaboration depth if the design is correct.";
+        std::cout << errorColored("error: ") << "exceeded maximum elaboration depth (" << maxElabDepth << "). The design may have a non-terminating recursion of parametric functions, modules, or types. Fix the design to avoid non-termination, or increase the maximum elaboration depth (with --max-elab-depth) if the design is correct.";
     }
     if (error) {
         std::cout << "The last elaboration steps are:\n";

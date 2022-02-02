@@ -95,4 +95,6 @@ class SourceMap {
         const std::string& getTopModule() const { return topModule; }
 };
 
+void setElabLimits(uint64_t maxSteps, uint64_t maxDepth);
+
 SourceMap translateFiles(const std::vector<MinispecParser::PackageDefContext*>& parsedTrees, const std::string& topLevel);

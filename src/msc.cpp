@@ -422,6 +422,14 @@ int main(int argc, const char* argv[]) {
         .help("keep temporary files around (useful for compiler debugging)")
         .default_value(false)
         .implicit_value(true);
+    args.add_argument("--max-elab-steps")
+        .help("maximum number of elaboration steps")
+        .default_value((uint64_t) 50000)
+        .scan<'u', uint64_t>();
+    args.add_argument("--max-elab-depth")
+        .help("maximum elaboration depth")
+        .default_value((uint64_t) 1000)
+        .scan<'u', uint64_t>();
 
     try {
         args.parse_args(argc, argv);
@@ -462,6 +470,7 @@ int main(int argc, const char* argv[]) {
 
     // Other options
     initReporting(args.get<bool>("--all-errors"));
+    setElabLimits(args.get<uint64_t>("--max-elab-steps"), args.get<uint64_t>("--max-elab-depth"));
 
     // Construct the Minispec path, composed of: (1) the input file's
     // directory, (2) the directories in the --path flag, and (3) the current
