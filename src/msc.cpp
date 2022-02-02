@@ -423,7 +423,12 @@ int main(int argc, const char* argv[]) {
         .default_value(false)
         .implicit_value(true);
 
-    PARSE_ARGS(args, argc, argv);
+    try {
+        args.parse_args(argc, argv);
+    } catch (const std::exception& err) {
+        error("could not parse command-line arguments: %s\n       run %s --help for information on command-line options",
+                err.what(), argv[0]);
+    }
 
     if (args.get<bool>("--version")) {
         std::cout << "Minispec compiler version " << getVersion() << "\n";
@@ -438,7 +443,7 @@ int main(int argc, const char* argv[]) {
     bool bsvOut = false;
     bool simOut = false;
     bool verilogOut = false;
-    bool defaultOut = args.is_default("--output");
+    bool defaultOut = !args.is_used("--output");
     {
         std::string outsArg = args.get<std::string>("--output");
         std::string outs = outsArg;
