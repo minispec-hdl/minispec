@@ -1417,7 +1417,11 @@ class Elaborator : public MinispecBaseListener {
             // before the module name, e.g. module /*msc_pragma:nosynth*/ Foo
             // If this is used with any frequency, then we should make (* *)
             // pragmas part of the language...
+            //
+            // Also, figure out whether we need to emit the `(* synthesize *)`
+            // pragma
             bool emitBVIDef = false;
+            bool emitSynthesizePragma = false;
             {
                 auto tokenStream = getTokenStream(ctx);
                 Interval si0 = ctx->children[0]->getSourceInterval();
@@ -1425,10 +1429,12 @@ class Elaborator : public MinispecBaseListener {
                 if (si0.b + 1 < si1.a) {
                     std::string s = tokenStream->getText(Interval(si0.b + 1, si1.a -1));
                     emitBVIDef = s.find("msc_pragma:nosynth") != std::string::npos;
+                    emitSynthesizePragma = s.find("msc_pragma:synthesize") != std::string::npos;
                 }
             }
 
             if (emitBVIDef) tc->emitLine("`ifndef __VERILOG__");
+            if (emitSynthesizePragma) tc->emitLine("(* synthesize *)");
 
             // Then, emit the module, following standard BSV conventions for naming
             tc->emitStart(ctx);
