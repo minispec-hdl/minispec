@@ -521,7 +521,7 @@ int main(int argc, const char* argv[]) {
     std::stringstream bscPath;
     for (std::string dir : path) {
         auto path = std::filesystem::path(dir);
-        bscPath << (path.is_relative()? "../" : "") << dir << ":";
+        bscPath << (path.is_relative()? "'../" : "'") << dir << "':";
     }
     bscPath << "%:+";
     std::string bscOpts = "-p " + bscPath.str() + " " + args.get<std::string>("--bscOpts");
