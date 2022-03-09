@@ -1,0 +1,13 @@
+--- a/passes/techmap/abc.cc	2018-10-16 10:22:16.000000000 -0400
++++ b/passes/techmap/abc.cc	2022-03-08 18:24:46.000000000 -0500
+@@ -1473,6 +1473,10 @@
+ 				rewrite_filename(script_file);
+ 				if (!script_file.empty() && !is_absolute_path(script_file) && script_file[0] != '+')
+ 					script_file = std::string(pwd) + "/" + script_file;
++                                // dsm: Quote path to avoid ABC misparsing paths with spaces
++                                // NOTE: All other paths are unquoted and ABC would crash, but this is the only
++                                // user-specific one (we assume contraint files etc. are installed in  paths without spaces)
++                                script_file = "\"" + script_file + "\"";
+ 				continue;
+ 			}
+ 			if (arg == "-liberty" && argidx+1 < args.size()) {
