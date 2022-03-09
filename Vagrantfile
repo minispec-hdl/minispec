@@ -44,10 +44,8 @@ Vagrant.configure("2") do |config|
     apt-get -y install build-essential clang bison flex libreadline-dev gawk tcl-dev libffi-dev pkg-config python3 graphviz 
     if [ ! -d ~vagrant/yosys ]; then
       echo "Downloading yosys"
-      sudo -u vagrant wget -nc -nv https://github.com/YosysHQ/yosys/archive/yosys-0.8.tar.gz
-      sudo -u vagrant tar xzf yosys-0.8.tar.gz
+      sudo -u vagrant /vagrant/synth.build-yosys.sh
       sudo -u vagrant mv yosys-yosys-0.8 yosys
-      sudo -u vagrant bash -c "cd yosys && make -j4"
       echo "# Yosys config" >> ~vagrant/.bashrc
       echo 'export PATH=\$HOME/yosys:\$PATH' >> ~vagrant/.bashrc
     fi
