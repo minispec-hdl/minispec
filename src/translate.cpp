@@ -1451,7 +1451,7 @@ class Elaborator : public MinispecBaseListener {
             };  // lambda wrapper so we can reuse for BVI
             emitModuleHeader();
 
-            // Emit in order required by bsv: submodules/input wires, then rules, then methods
+            // Emit in order required by bsv: submodules/input wires, then functions, then rules, then methods
             auto moduleName = [this](MinispecParser::TypeContext* modTypeCtx) {
                 auto tc = createTranslatedCodePtr();
                 tc->emit(modTypeCtx);
@@ -1519,6 +1519,24 @@ class Elaborator : public MinispecBaseListener {
                     }
                 } else if (auto x = stmt->stmt()) {
                     tc->emitLine("  ", x);
+                }
+                tc->emitEnd();
+            }
+
+            for (auto stmt : ctx->moduleStmt()) {
+                tc->emitStart(stmt);
+                if (auto f = stmt->functionDef()) {
+                    // For now, disable parametric functions within modules.
+                    // This would require doing nested parametic elaboration
+                    // (first within each module, and then globally for all the
+                    // parametric invocations not resolves within the module
+                    if (f->functionId()->paramFormals()) {
+                        report(BasicError(f->functionId()->paramFormals(), " function " + quote(f->functionId()->name) +
+                            " in module " + quote(ctx->moduleId()->name) + " cannot be parametric " +
+                            "(parametric functions within modules are currently not supported)"));
+                    } else {
+                        tc->emitLine(f);
+                    }
                 }
                 tc->emitEnd();
             }

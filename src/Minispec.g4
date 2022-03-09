@@ -104,6 +104,7 @@ moduleStmt :
     submoduleDecl
     | inputDef 
     | methodDef
+    | functionDef
     | ruleDef
     | stmt
     ;
