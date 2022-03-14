@@ -1018,7 +1018,6 @@ class Elaborator : public MinispecBaseListener {
             elaboratorWalker.walk(this, ctx->expression());
             Any exprValue = getValue(ctx->expression());
             if (exprValue.is<bool>() || exprValue.is<int64_t>()) {
-                std::cout << "XXXX\n";
                 MinispecParser::StmtContext* matchedStmt = nullptr;
                 bool hasVariableItemExprs = false;
                 for (auto item : ctx->caseStmtItem()) {
