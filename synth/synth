@@ -267,7 +267,7 @@ if __name__ == "__main__":
         # Minispec: just use msc output
         isModule = args.target[0].isupper()
         print("Compiling %s %s from file %s" % ("module" if isModule else "function", args.target, args.file))
-        run("(cd %s && msc -o v,bsv '%s' '%s')" % (args.synthdir, os.path.abspath(args.file), args.target))
+        run("(cd %s && msc -o v,bsv --bscOpts ' -opt-undetermined-vals -unspecified-to X ' '%s' '%s')" % (args.synthdir, os.path.abspath(args.file), args.target))
         modName = "mk" + args.target.strip() if "#" not in args.target else "mkTopLevel___"
     else:
         # Bluespec

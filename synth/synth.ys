@@ -1,11 +1,11 @@
 $READVERILOGCMDS
 
 hierarchy -top $MODNAME;
-proc;
-flatten; opt
-fsm;
-memory;
-techmap; opt
+proc; opt -full
+flatten; opt -full
+fsm; opt -full
+memory; opt -full
+techmap; opt -full
 
 # Optimized mapping using ABC (gives area and timing)
 # NOTE(dsm): I think the current ABC defaults aren't that good; -fast does a
