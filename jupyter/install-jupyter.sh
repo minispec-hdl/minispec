@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # $lic$
-# Copyright (C) 2019-2022 by Daniel Sanchez
+# Copyright (C) 2019-2024 by Daniel Sanchez
 #
 # This file is part of the Minispec compiler and toolset.
 #
