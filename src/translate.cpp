@@ -1382,7 +1382,7 @@ class Elaborator : public MinispecBaseListener {
             for (auto stmt : ctx->moduleStmt()) {
                 // NOTE: Rules are emitted before methods, but for elaboration
                 // we don't care about their order, b/c they're independent
-                if (stmt->ruleDef() || stmt->methodDef()) {
+                if (stmt->ruleDef() || stmt->methodDef() || stmt->functionDef()) {
                     elaboratorWalker.walk(this, stmt);
                 }
             }
@@ -1534,7 +1534,7 @@ class Elaborator : public MinispecBaseListener {
                             " in module " + quote(ctx->moduleId()->name) + " cannot be parametric " +
                             "(parametric functions within modules are currently not supported)"));
                     } else {
-                        tc->emitLine(f);
+                        tc->emitLine("  ", f);
                     }
                 }
                 tc->emitEnd();
