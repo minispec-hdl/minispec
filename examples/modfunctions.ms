@@ -4,8 +4,9 @@
 function Bool inv(Bit#(4) x) = x[0] == 0? True: False;
 
 module Foo;
+    Integer c = 1; // test that functions are elaborated
     Reg#(Bool) r(False);
-    function Bool inv(Bool x) = !x;
+    function Bool inv(Bool x) = (c == 1)? !x : x;
     // Parametric functions within modules are currently disallowed
     //function Bool test#(Integer n)(Bool x) = x;
     method Bool m = inv(r);
