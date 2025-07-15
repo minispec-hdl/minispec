@@ -36,13 +36,13 @@ import re, sys
 
 def _canonicalizeBsv(input):
     # Remove comments
-    res = re.sub('\/\*(.*?)\*\/', '', input, flags = re.MULTILINE | re.DOTALL)
-    res = re.sub('\/\/(.*?)\n', '\n', res)
+    res = re.sub(r'\/\*(.*?)\*\/', '', input, flags = re.MULTILINE | re.DOTALL)
+    res = re.sub(r'\/\/(.*?)\n', '\n', res)
     # Make all whitespaces a single space
     res = re.sub('(\n|\r|\t)', ' ', res)
     res = re.sub(' +', ' ', res)
     # Remove spaces around relevant symbols
-    res = re.sub(' ?(,|\.|{|}|#|\(|\)|\?|\:|\=|;|\') ?', '\\1', res)
+    res = re.sub(r' ?(,|\.|{|}|#|\(|\)|\?|\:|\=|;|\') ?', '\\1', res)
     return res
 
 # Parametric types have extraneous \ throughout. Nix them.
@@ -109,12 +109,12 @@ class MinispecLayout:
 
         def getRegs(modName):
             # Flatten vectors of submodules
-            m = re.match("Vector#\((\d+),(\S+)\)", modName)
+            m = re.match(r"Vector#\((\d+),(\S+)\)", modName)
             if m != None:
                 elems = int(m.group(1))
                 elemType = m.group(2)
                 
-                r = re.match("(Reg|RegU)#\((\S+)\)", elemType)
+                r = re.match(r"(Reg|RegU)#\((\S+)\)", elemType)
                 if r != None:
                     return [(str(i), r.group(2)) for i in range(elems)]
 
@@ -244,7 +244,7 @@ class MinispecLayout:
                 if "=" in lStr:
                     (l, _, id) = lStr.rpartition("=")
                     # Format as unsized (FIXME: Test thoroughly)
-                    id = re.sub("(\d+)\'", "0", id)
+                    id = re.sub(r"(\d+)\'", "0", id)
                     id = re.sub("h", "x", id)
                     curId = int(id, 0) # infer base
                 else:
@@ -282,16 +282,16 @@ class MinispecLayout:
                 if t == "Bool":
                     typeDict[t] = 1
                     continue
-                m = re.match("(Bit|Int|UInt)#\((\d+)\)", t)
+                m = re.match(r"(Bit|Int|UInt)#\((\d+)\)", t)
                 if m != None:
                     typeDict[t] = int(m.group(2))
                     continue
-                m = re.match("Maybe#\((\S+)\)", t)
+                m = re.match(r"Maybe#\((\S+)\)", t)
                 if m != None:
                     # BSV Layout: In a Maybe type, the valid bit is the highest-order one
                     typeDict[t] = [("value", m.group(1)), ("valid", "Bool")]
                     continue
-                m = re.match("Vector#\((\d+),(\S+)\)", t)
+                m = re.match(r"Vector#\((\d+),(\S+)\)", t)
                 if m != None:
                     # BSV Layout: Given n-bit elements, Vector element i takes bits [i*(n+1)-1:i*n]
                     typeDict[t] = [("_%d" % i, m.group(2)) for i in range(int(m.group(1)))]

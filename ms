@@ -1,4 +1,4 @@
-#!/usr/bin/python2 -u
+#!/usr/bin/env python3
 # High-level minispec interface, mimics that of minispec Jupyter kernel
 # Author: Daniel Sanchez
 
@@ -15,7 +15,7 @@ def writeFile(file, data):
 # successfully, run() returns stdout and stderr; on a failure, run() stops the
 # program.
 def run(cmd, failMsg=None):
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     (stdout, stderr) = p.communicate()
     if p.returncode == 0:
         return stdout
@@ -29,14 +29,15 @@ def decolorize(s):
     return re.sub(r"\x1B[@-_][0-?]*[ -/]*[@-~]", "", s)
 
 def printUsage():
-    print '''usage: ms <command> [<args>]
+    print(
+'''usage: ms <command> [<args>]
 
 Available commands:
   eval [<file>] <expression>                    Evaluate expression
   sim <file> <module>                           Simulate module
   synth <file> <function/module> <synthArgs>    Synthesize function or module
   help                                          Print help message
-  
+
 <file> should be a Minispec file with the target function or module. The file
 argument is optional in ms eval, as it is not needed if <expression> does not
 call any user-defined functions.
@@ -49,10 +50,11 @@ Quotes are required for most expressions (e.g., ms eval "2'b101 + 3") and for
 parametric functions and modules (e.g., ms synth add.ms "add#(32)".
 
 The synth command can take additional arguments; run ms synth -h for more info.'''
+    )
 
 args = sys.argv
 if len(args) < 2:
-    print "error: no arguments given"
+    print ("error: no arguments given")
     printUsage()
     sys.exit(1)
 
@@ -63,7 +65,8 @@ if cmd == "eval":
     tmpDir = mkdtemp(suffix="ms")
     atexit.register(shutil.rmtree, tmpDir) # auto-remove tmpDir on exit
     if len(cmdArgs) == 0:
-        print "error: need an expression to evaluate"
+        print("error: need an expression to evaluate")
+        sys.exit(1)
     elif len(cmdArgs) == 1:
         pathArg = ""
         importStmt = ""
@@ -71,7 +74,7 @@ if cmd == "eval":
     else:
         file = args[2]
         if not file.endswith(".ms"):
-            print "Invalid file argument: %s must be a Minispec file (ending in .ms)" % file
+            print ("Invalid file argument: %s must be a Minispec file (ending in .ms)" % file)
         pathArg = "-p '%s'" % os.path.dirname(os.path.abspath(file))
         stem = os.path.basename(file)[:-3]
         importStmt = "import %s;" % stem
@@ -94,23 +97,23 @@ endmodule''' % (importStmt, expr, expr)
     sys.exit(os.system("(cd %s && ./Eval___)" % tmpDir))
 elif cmd == "sim":
     if len(cmdArgs) < 2:
-        print "error: need file and module arguments"
+        print("error: need file and module arguments")
         sys.exit(1)
     file = args[2]
-    print "Compiling module"
+    print ("Compiling module")
     mscOut = decolorize(run("msc -o sim '%s' %s" % (file, " ".join(cmdArgs[1:]))))
     m = re.search("produced simulation executable (.*?)\n", mscOut)
     if m is None:
-        print "error: msc didn't produce a simulation executable!?"
+        print("error: msc didn't produce a simulation executable!?")
         sys.exit(1)
     execName = m.group(1)
-    print "Simulating module"
+    print ("Simulating module")
     sys.exit(os.system("./%s" % execName))
 elif cmd == "synth":
     sys.exit(os.system("synth " + " ".join(cmdArgs)))
 elif cmd == "help":
-    print "Minispec command-line interface\n"
+    print("Minispec command-line interface\n")
     printUsage()
 else:
-    print "error: invalid command " + cmd + " (run 'ms help' for more information)"
+    print("error: invalid command " + cmd + " (run 'ms help' for more information)")
     sys.exit(1)

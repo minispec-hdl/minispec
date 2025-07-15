@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # $lic$
 # Copyright (C) 2018-2021 by Daniel Sanchez
@@ -26,8 +26,8 @@ from minispeclayout import MinispecLayout
 
 # Given multi-line input BSV, returns BSV without single or multi-line comments
 def stripComments(input):
-    strippedMultiline = re.sub('\/\*(.*?)\*\/', '', input, flags = re.MULTILINE | re.DOTALL)
-    stripped = re.sub('\/\/(.*?)\n', '\n', strippedMultiline)
+    strippedMultiline = re.sub(r'/\*(.*?)\*/', '', input, flags = re.MULTILINE | re.DOTALL)
+    stripped = re.sub(r'//(.*?)\n', '\n', strippedMultiline)
     return stripped
 
 # Parse Bluespec function signature from string.
@@ -65,19 +65,20 @@ def parseBsvFuncStr(funcStr):
             return None
 
     # Each arg type / name is parsed just like the return arg / function name
-    argList = []
-    for arg in funcArgs.split(","):
-        (argType, _, argName) = arg.strip().rpartition(" ")
-        if len(argType) == 0:
-            print("WARN: Could not parse arg %s in function %s; (missing type or name)" % (arg, funcStr))
-            return None
-        argList.append((argType, argName))
 
-    return (retType, funcName, argList)
+    # argList = []
+    # for arg in funcArgs.split(","):
+    #     (argType, _, argName) = arg.strip().rpartition(" ")
+    #     if len(argType) == 0:
+    #         print("WARN: Could not parse arg %s in function %s; (missing type or name)" % (arg, funcStr))
+    #         return None
+    #     argList.append((argType, argName))
+
+    return (retType, funcName, funcArgs)
 
 def compileBsvFunction(input, args):
     targetFunc = None
-    for f in re.finditer(' function (.*?);', input):
+    for f in re.finditer(r' function (.*?);', input):
         #print "Identified function", f.group(1)
         func = parseBsvFuncStr(f.group(1).strip())
         if not func:
@@ -90,14 +91,13 @@ def compileBsvFunction(input, args):
     if not targetFunc:
         return False
 
-    (retType, funcName, argList) = targetFunc
-    print("Synthesizing  function %s %s(%s)  from file %s" % (retType, funcName, ", ".join("%s %s" % arg for arg in argList), args.file))
-    methodName = funcName + "_"
+    (retType, funcName, funcArgs) = targetFunc
+    print("Synthesizing  function %s %s(%s)  from file %s" % (retType, funcName, funcArgs, args.file))
 
     # Produce the synthesis wrapper
     imports = []
     # Inherit all imports of the function's file (in case they're needed for e.g., arg or output types)
-    for f in re.finditer(' import .*?;', input):
+    for f in re.finditer(r' import .*?;', input):
         imports.append(f.group(0).strip())
     # Import the funtion's file
     imports.append("import " + args.file.rpartition(".")[0].split("/")[-1] + "::*;")
@@ -105,8 +105,9 @@ def compileBsvFunction(input, args):
     wrapperTemplate = string.Template(readFile(os.path.join(scriptDir, "synth.bsv")))
     wrapperData = wrapperTemplate.substitute(
         IMPORTS = "\n".join(imports),
-        METHOD = "method %s %s(%s);" % (retType, methodName, ", ".join("%s %s" % arg for arg in argList)),
-        FUNCCALL = "%s(%s)" % (funcName, ", ".join(arg[1] for arg in argList)),
+        RETURN_TYPE = retType,
+        FUNC_NAME = funcName,
+        FUNC_ARGS = funcArgs,
     )
     wrapperFile = os.path.join(args.synthdir, "synth_" + funcName + ".bsv")
     writeFile(wrapperFile, wrapperData, "synthesis wrapper")
@@ -120,7 +121,7 @@ def compileBsvModule(input, args):
     # Instead, we just ensure that the module exists.
     modName = args.target.strip()
     found = False
-    for f in re.finditer(' module (.*?)\(', input):
+    for f in re.finditer(r' module (.*?)\(', input):
         name = f.group(1).strip()
         if name != modName:
             continue
@@ -423,15 +424,15 @@ if __name__ == "__main__":
                 print("ERROR: Yosys output does not contain timing and area analysis")
                 sys.exit(1)
 
-        match = re.search('ABC: WireLoad = "none" (.*)', abcOut)
+        match = re.search(r'ABC: WireLoad = "none" (.*)', abcOut)
         if not match:
             print("ERROR: Yosys output does not contain timing and area analysis, but grep didn't fail?")
             sys.exit(1)
 
         #print match.group(1)
         summaryLine = match.group(1)
-        delay = re.search("Delay = (.*?) ps", summaryLine).group(1).strip()
-        area = re.search("Area = (.*?) \(", summaryLine).group(1).strip()
+        delay = re.search(r"Delay = (.*?) ps", summaryLine).group(1).strip()
+        area = re.search(r"Area = (.*?) \(", summaryLine).group(1).strip()
         return (delay, area, outDir)
 
     if args.names:
@@ -442,7 +443,7 @@ if __name__ == "__main__":
         # doesn't delete it... geeeez)
         (p, _) = runYosys_start(os.path.join(args.synthdir, "yosys_input"), "", "thiswillfail;")
         errMsg = run_geterr(p)
-        tmpOutBlif = re.search("Can't open ABC output file `(.*?)'", errMsg).group(1).strip()
+        tmpOutBlif = re.search(r"Can't open ABC output file `(.*?)'", errMsg).group(1).strip()
         tmpInBlif = tmpOutBlif.replace("output.blif", "input.blif")
         inBlifFile = os.path.join(args.synthdir, "input.blif")
 
@@ -485,7 +486,7 @@ if __name__ == "__main__":
     yosysOut = readFile(yosysOutFile(yosysOutDir))
 
     # Parse the relevant components
-    match = re.search('ABC: WireLoad = "none" (.*?) write_blif', yosysOut, flags = re.MULTILINE | re.DOTALL)
+    match = re.search(r'ABC: WireLoad = "none" (.*?) write_blif', yosysOut, flags = re.MULTILINE | re.DOTALL)
     if not match:
         print("ERROR: Yosys output does not contain timing and area analysis")
         sys.exit(1)
@@ -502,11 +503,11 @@ if __name__ == "__main__":
             break
     assert pointsLine
 
-    gates = re.search("Gates = (.*?) \(", summaryLine).group(1).strip()
-    delay = re.search("Delay = (.*?) ps", summaryLine).group(1).strip()
+    gates = re.search(r"Gates = (.*?) \(", summaryLine).group(1).strip()
+    delay = re.search(r"Delay = (.*?) ps", summaryLine).group(1).strip()
 
-    startPoint = re.search("Start-point = (.*?) \((.*?)\)", pointsLine).group(2).strip()
-    endPoint = re.search("End-point = (.*?) \((.*?)\)", pointsLine).group(2).strip()
+    startPoint = re.search(r"Start-point = (.*?) \((.*?)\)", pointsLine).group(2).strip()
+    endPoint = re.search(r"End-point = (.*?) \((.*?)\)", pointsLine).group(2).strip()
 
     if not isModule:
         # Function name demangling
@@ -546,7 +547,7 @@ if __name__ == "__main__":
         if "dfflibmap" in startPoint:
             # This is probably the negated output of a DFF
             blif = readFile(os.path.join(yosysOutDir, "out.blif")).replace("\n", " ")
-            m = re.search("Q=(\S+)\s+QN=" + re.escape(startPoint), blif)
+            m = re.search(r"Q=(\S+)\s+QN=" + re.escape(startPoint), blif)
             if m:
                 bsvStartPoint = "~" + m.group(1)
             else:
@@ -568,7 +569,7 @@ if __name__ == "__main__":
         bsvStartPoint = msLayout.translate(bsvStartPoint)
         bsvEndPoint = msLayout.translate(bsvEndPoint)
 
-    match = re.search('Printing statistics.(.*?)Executing BLIF backend.', yosysOut, flags = re.MULTILINE | re.DOTALL)
+    match = re.search(r'Printing statistics.(.*?)Executing BLIF backend.', yosysOut, flags = re.MULTILINE | re.DOTALL)
     if not match:
         print("ERROR: Yosys output does not contain timing and area analysis")
         sys.exit(1)
@@ -609,13 +610,13 @@ if __name__ == "__main__":
     valToInt = lambda v : int(v.split("d")[-1]) if "d" in v else 0
     if isModule:
         verilog = readFile(os.path.join(yosysOutDir, "out.verilog")).replace("\n", " ")
-        for m in re.finditer(' BRAM(.*?) #\( (.*?)   \) (.*?) \(', verilog):
+        for m in re.finditer(r' BRAM(.*?) #\( (.*?)   \) (.*?) \(', verilog):
             suffix = m.group(1).strip()
             params = m.group(2)
             name = m.group(3).strip()
             words = 0
             wordsize = 0
-            for p in re.finditer('\.(.*?)\((.*?)\)', params):
+            for p in re.finditer(r'\.(.*?)\((.*?)\)', params):
                 param = p.group(1).strip()
                 value = p.group(2).strip()
                 if param == "ADDR_WIDTH": words = 2 ** valToInt(value)
@@ -650,7 +651,7 @@ if __name__ == "__main__":
         inNodeToVar = [None] * len(lines)
         for line in lines:
             if len(line) == 0: continue
-            m = re.search("# k([0-9]+)\s+(.*)", line)
+            m = re.search(r"# k([0-9]+)\s+(.*)", line)
             #print line, m, m.group(2)
             inNodeToVar[int(m.group(1))] = m.group(2)
 
@@ -672,7 +673,7 @@ if __name__ == "__main__":
         unmatched = 0
 
         undressedBlif = readFile(os.path.join(yosysOutDir, "postmap.blif")).replace("\n", " ")
-        m = re.search("\.inputs(.*?)\.outputs(.*?)\.", undressedBlif)
+        m = re.search(r"\.inputs(.*?)\.outputs(.*?)\.", undressedBlif)
         parsePorts = lambda s: s.strip().replace("\\", "").split()
         undressedPorts = set(parsePorts(m.group(1)) + parsePorts(m.group(2)))
 
@@ -701,7 +702,7 @@ if __name__ == "__main__":
             outIdx = int(outNode)
 
             inNode = dLine.strip().split()[-1]
-            m = re.search("k([0-9]+)(.*)", inNode.strip())
+            m = re.search(r"k([0-9]+)(.*)", inNode.strip())
             #print outIdx, dLine, inNode, m
             if m == None:
                 unmatched += 1
@@ -775,7 +776,7 @@ if __name__ == "__main__":
     for line in pathLines:
         #ABC: Path  1 --     232 : 1    8 BUF_X4   A =   1.86  Df =  22.1   -1.1 ps  S =   7.2 ps  Cin =  3.3 ff  Cout =  16.7 ff  Cmax = 242.3 ff  G =  478
         #m = re.search("--\s+(\d+)\s?:\s?\d+\s+(\d+)\s+(\S+).*Df =([0-9.]+)\s?ps", line)
-        m = re.search("\s+(\d+)\s?:\s?\d+\s+(\d+)\s+(\S+).*?Df =(.*?)ps", line)
+        m = re.search(r"\s+(\d+)\s?:\s?\d+\s+(\d+)\s+(\S+).*?Df =(.*?)ps", line)
         outNode = int(m.group(1))
         fanout = int(m.group(2))
         gateName = m.group(3)
@@ -796,12 +797,12 @@ if __name__ == "__main__":
         # critical-path report b/c it depends on gathering more info, which can
         # get expensive, and because we're relying on a patched ABC. but
         # there's a fair amount of duplication. Merge/dedup things eventually!
-        match = re.search('\+ stime -a (.*?) \+ write_blif', yosysOut, flags = re.MULTILINE | re.DOTALL)
+        match = re.search(r'\+ stime -a (.*?) \+ write_blif', yosysOut, flags = re.MULTILINE | re.DOTALL)
         if match == None:
             print("ERROR: Path analysis not available")
         else:
             delayInfo = dict([(node, (delay, critFi, fos.strip())) for (delay, node, critFi, fos) in
-                re.findall("Dr =\s+(\S+).+?Name =\s+(\S+)\s+CritFI =\s+(\S+)\s+FOs =(.*)",
+                re.findall(r"Dr =\s+(\S+).+?Name =\s+(\S+)\s+CritFI =\s+(\S+)\s+FOs =(.*)",
                     match.group(1))])
             if len(delayInfo) == 0:
                 print("ERROR: Node/CritFI/FOs info not available from ABC; make sure you're using a patched version of yosys-abc suitable for synth!")
@@ -818,7 +819,7 @@ if __name__ == "__main__":
                             abcOutputs[fo] = node
 
                 blif = readFile(os.path.join(yosysOutDir, "out.blif"))
-                synonyms = re.findall(".names (\S+) (\S+)", blif)
+                synonyms = re.findall(r".names (\S+) (\S+)", blif)
 
                 # Find the ABC node name for every non-ABC node name.
                 # Requires multiple passes due to non-ABC synonyms
@@ -849,13 +850,13 @@ if __name__ == "__main__":
                     leftovers = nextLeftovers
 
                 # Gather the canonical I/O names for the purpose of prioritization
-                bm = re.search("\.inputs (.*)\n\.outputs (.*)\n", blif)
+                bm = re.search(r"\.inputs (.*)\n\.outputs (.*)\n", blif)
                 inputs = set(bm.group(1).strip().split(" "))
                 outputs = set(bm.group(2).strip().split(" "))
                 # Also consider DFF I/Os (as they are I/Os from ABC's perspective)
                 dffInputs = set()
                 dffOutputs = set()
-                for (d, q, qn) in re.findall(".subckt DFF.*?D=(\S+)\s+Q=(\S+)\s+QN=(\S+)", blif):
+                for (d, q, qn) in re.findall(r".subckt DFF.*?D=(\S+)\s+Q=(\S+)\s+QN=(\S+)", blif):
                     if d in nameToAbc:
                         dffOutputs.add(d)
                     if q in nameToAbc:
