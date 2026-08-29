@@ -120,8 +120,8 @@ endmodule
 // 16-bit counter built from 
 // two Counter8 submodules
 module Counter16;
-  Counter8 lo(0);
-  Counter8 hi(0);
+  Counter8 lo;
+  Counter8 hi;
 
   method Bit#(16) getCount =
    {hi.getCount,lo.getCount};
